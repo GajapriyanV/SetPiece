@@ -1,26 +1,206 @@
+@import url("https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@400;500;600;700;800;900&display=swap");
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-oswald: var(--font-oswald);
+  --font-mono: var(--font-mono);
+  --font-body: var(--font-body);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+:root {
+  --font-display: 'Big Shoulders Display', sans-serif;
+  --g: #00ff87;
+  --g2: #00e077;
+  --g3: rgba(0, 255, 135, 0.13);
+  --dark: #060608;
+  --dark2: #0c0c10;
+  --dark3: #111116;
+  --card: #0f0f14;
+  --border: #1a1a22;
+  --border2: #222230;
+  --text: #ececec;
+  --dim: #555566;
+  --red: #ff2d55;
 }
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--dark);
+  color: var(--text);
+  font-family: var(--font-body, 'Familjen Grotesk', sans-serif);
+  overflow-x: hidden;
+  cursor: none;
+}
+
+/* ── Noise overlay ── */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E");
+  opacity: 0.025;
+  pointer-events: none;
+  z-index: 999;
+}
+
+/* ── Keyframes ── */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
+
+@keyframes tick {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+@keyframes fu {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Scroll reveal ── */
+.rv {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.65s ease, transform 0.65s ease;
+}
+.rv.on {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ── Hero entrance animations ── */
+.hero-meta {
+  opacity: 0;
+  animation: fu 0.7s ease forwards 0.1s;
+}
+.hero-line-1 {
+  display: block;
+  opacity: 0;
+  animation: fu 0.7s ease forwards 0.2s;
+}
+.hero-line-2 {
+  display: block;
+  color: transparent;
+  -webkit-text-stroke: 1px rgba(236, 236, 236, 0.15);
+  opacity: 0;
+  animation: fu 0.7s ease forwards 0.35s;
+}
+.hero-line-3 {
+  display: block;
+  color: var(--g);
+  opacity: 0;
+  animation: fu 0.7s ease forwards 0.5s;
+}
+.hero-bottom-anim {
+  opacity: 0;
+  animation: fu 0.7s ease forwards 0.8s;
+}
+
+/* ── Ticker ── */
+.ticker-track {
+  animation: tick 35s linear infinite;
+}
+
+/* ── Live dot blink ── */
+.live-dot {
+  animation: blink 1.2s ease-in-out infinite;
+}
+.status-dot-live {
+  animation: blink 1s infinite;
+}
+
+/* ── Debate card corner triangle accent ── */
+.corner-accent {
+  position: relative;
+  overflow: hidden;
+}
+.corner-accent::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 0 28px 28px 0;
+  border-color: transparent var(--border) transparent transparent;
+  transition: border-color 0.3s;
+}
+.corner-accent:hover::after {
+  border-color: transparent var(--g) transparent transparent;
+}
+
+/* ── Feature card hover underline ── */
+.feature-card {
+  position: relative;
+  overflow: hidden;
+}
+.feature-card::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--g);
+  transform: scaleX(0);
+  transition: transform 0.4s ease;
+  transform-origin: left;
+}
+.feature-card:hover::before {
+  transform: scaleX(1);
+}
+
+/* ── Section label left line ── */
+.sec-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-mono, 'Roboto Mono', monospace);
+  font-size: 11px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--g);
+  margin-bottom: 12px;
+}
+.sec-label::before {
+  content: '';
+  width: 20px;
+  height: 1px;
+  background: var(--g);
+  flex-shrink: 0;
+}
+
+/* ── Waveform bar animation (room preview) ── */
+@keyframes wv {
+  from { transform: scaleY(0.3); }
+  to { transform: scaleY(1); }
+}
+
+/* ── Phase progress bar fill ── */
+@keyframes phase-fill {
+  from { transform: scaleX(0); transform-origin: left; }
+  to { transform: scaleX(1); transform-origin: left; }
+}
+
+/* ── Process step number line ── */
+.p-num {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono, 'Roboto Mono', monospace);
+  font-size: 10px;
+  color: var(--g);
+  letter-spacing: 3px;
+  margin-bottom: 28px;
+}
+.p-num::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(0, 255, 135, 0.15);
 }

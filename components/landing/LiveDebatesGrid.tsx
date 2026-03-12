@@ -161,11 +161,11 @@ function DebateCard({ debate }: { debate: Debate }) {
   );
 }
 
-function StartDebateCard() {
+function MoreCard() {
   const [hovered, setHovered] = useState(false);
   return (
     <Link
-      href="/create"
+      href="/rooms"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
@@ -181,19 +181,20 @@ function StartDebateCard() {
       <div style={{
         width: "48px", height: "48px", border: `1px solid ${hovered ? "var(--g)" : "var(--border2)"}`,
         borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
-        fontSize: "24px", color: hovered ? "var(--g)" : "var(--dim)", transition: "all 0.25s",
-      }}>+</div>
+        fontSize: "20px", color: hovered ? "var(--g)" : "var(--dim)", transition: "all 0.25s",
+        letterSpacing: "2px",
+      }}>···</div>
       <div style={{
         fontFamily: "var(--font-oswald, 'Oswald', sans-serif)",
         fontSize: "16px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "2px",
         color: hovered ? "var(--g)" : "var(--dim)", transition: "color 0.25s",
-      }}>Start A Debate</div>
+      }}>More Rooms</div>
       <div style={{
         fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
         fontSize: "10px", color: "var(--dim)", letterSpacing: "1.5px",
         textTransform: "uppercase", textAlign: "center",
       }}>
-        Challenge someone now
+        Browse all live debates
       </div>
     </Link>
   );
@@ -255,7 +256,7 @@ export default function LiveDebatesGrid() {
           border: "1px solid var(--border)",
         }}>
           {DEBATES.map((d) => <DebateCard key={d.id} debate={d} />)}
-          <StartDebateCard />
+          <MoreCard />
         </div>
       </div>
     </div>

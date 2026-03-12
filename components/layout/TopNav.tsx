@@ -74,21 +74,30 @@ export default function TopNav() {
       </div>
 
       {/* Right side */}
-      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
         <Link
           href="/login"
           style={{
             fontSize: "12px",
-            color: "var(--dim)",
+            color: "var(--text)",
             textDecoration: "none",
-            letterSpacing: "1px",
+            letterSpacing: "1.5px",
             fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
-            transition: "color 0.2s",
+            textTransform: "uppercase",
+            fontWeight: 400,
+            padding: "8px 20px",
+            border: "1px solid rgba(255,255,255,0.12)",
+            borderRadius: "3px",
+            transition: "all 0.2s",
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text)")}
-          onMouseLeave={(e) => (e.currentTarget.style.color = "var(--dim)")}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = "var(--dim)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)";
+          }}
         >
-          Sign in
+          Sign In
         </Link>
         <Link
           href="/register"
@@ -107,14 +116,12 @@ export default function TopNav() {
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.background = "var(--g2)";
-            e.currentTarget.style.transform = "translateY(-1px)";
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.background = "var(--g)";
-            e.currentTarget.style.transform = "translateY(0)";
           }}
         >
-          Get started →
+          Get Started →
         </Link>
       </div>
     </nav>

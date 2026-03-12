@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /c/Users/gajap/Desktop/SetPiece -type f -name \"package.json\" -o -name \"next.config.*\" -o -name \"tailwind.config.*\" -o -name \"tsconfig.json\" -o -name \".env*\" 2>/dev/null | head -20)",
+      "Bash(git -C /c/Users/gajap/Desktop/SetPiece status)",
+      "Bash(npx create-next-app@latest . --typescript --tailwind --eslint --app --no-src-dir --import-alias=\"@/*\" --yes 2>&1)",
+      "Read(//c/Users/gajap/Desktop/**)",
+      "Bash(npx create-next-app@latest setpiece --typescript --tailwind --eslint --app --no-src-dir --import-alias=\"@/*\" --yes)",
+      "Bash(cd /c/Users/gajap/Desktop && npx create-next-app@latest setpiece-tmp --typescript --tailwind --eslint --app --no-src-dir --import-alias=\"@/*\" --yes 2>&1)",
+      "Bash(cp -r /c/Users/gajap/Desktop/setpiece-tmp/. /c/Users/gajap/Desktop/SetPiece/ && ls /c/Users/gajap/Desktop/SetPiece/)",
+      "Bash(npm run:*)",
+      "Bash(rm -rf node_modules .next && npm install 2>&1 | tail -20)",
+      "Bash(sleep 5 && curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000 2>&1)",
+      "Bash(sleep 4 && curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000 2>&1)",
+      "Bash(taskkill /PID 30688 /F 2>&1; sleep 2 && npm run dev)",
+      "Bash(sleep 6 && curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000 2>&1)",
+      "Bash(cmd //c \"taskkill /PID 30688 /F\" 2>&1)",
+      "Bash(taskkill /F /IM node.exe 2>/dev/null; echo \"Done\")",
+      "Bash(netstat -ano | findstr :3000)"
+    ]
+  }
+}

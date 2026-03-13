@@ -1,12 +1,17 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import SignInModal from "@/components/auth/SignInModal";
 
 export default function TopNav() {
   const pathname = usePathname();
+  const [showSignIn, setShowSignIn] = useState(false);
 
   return (
+    <>
+    {showSignIn && <SignInModal onClose={() => setShowSignIn(false)} />}
     <nav
       style={{
         position: "fixed",
@@ -81,12 +86,12 @@ export default function TopNav() {
 
       {/* Right side */}
       <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-        <Link
-          href="/login"
+        <button
+          onClick={() => setShowSignIn(true)}
           style={{
             fontSize: "12px",
             color: "var(--text)",
-            textDecoration: "none",
+            background: "transparent",
             letterSpacing: "1.5px",
             fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
             textTransform: "uppercase",
@@ -95,6 +100,7 @@ export default function TopNav() {
             border: "1px solid rgba(255,255,255,0.12)",
             borderRadius: "3px",
             transition: "all 0.2s",
+            cursor: "pointer",
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.borderColor = "var(--dim)";
@@ -104,7 +110,7 @@ export default function TopNav() {
           }}
         >
           Sign In
-        </Link>
+        </button>
         <Link
           href="/register"
           style={{
@@ -131,5 +137,6 @@ export default function TopNav() {
         </Link>
       </div>
     </nav>
+    </>
   );
 }

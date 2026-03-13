@@ -14,8 +14,7 @@ export default function HeroCursor() {
       mx = e.clientX;
       my = e.clientY;
       if (dotRef.current) {
-        dotRef.current.style.left = mx + "px";
-        dotRef.current.style.top = my + "px";
+        dotRef.current.style.transform = `translate3d(${mx}px, ${my}px, 0) translate(-50%, -50%)`;
       }
     };
 
@@ -23,8 +22,7 @@ export default function HeroCursor() {
       rx += (mx - rx) * 0.1;
       ry += (my - ry) * 0.1;
       if (ringRef.current) {
-        ringRef.current.style.left = rx + "px";
-        ringRef.current.style.top = ry + "px";
+        ringRef.current.style.transform = `translate3d(${rx}px, ${ry}px, 0) translate(-50%, -50%)`;
       }
       rafId = requestAnimationFrame(loop);
     };
@@ -50,8 +48,9 @@ export default function HeroCursor() {
           position: "fixed",
           pointerEvents: "none",
           zIndex: 9999,
-          transform: "translate(-50%, -50%)",
-          mixBlendMode: "screen",
+          top: 0,
+          left: 0,
+          willChange: "transform",
         }}
       />
       <div
@@ -64,7 +63,9 @@ export default function HeroCursor() {
           position: "fixed",
           pointerEvents: "none",
           zIndex: 9998,
-          transform: "translate(-50%, -50%)",
+          top: 0,
+          left: 0,
+          willChange: "transform",
         }}
       />
     </>

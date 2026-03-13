@@ -1,8 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 export default function TopNav() {
+  const pathname = usePathname();
+
   return (
     <nav
       style={{
@@ -48,29 +51,32 @@ export default function TopNav() {
           transform: "translateX(-50%)",
         }}
       >
-        {["Debates", "Format", "Rankings"].map((label, i) => (
-          <Link
-            key={label}
-            href={i === 0 ? "#debates" : i === 1 ? "#how" : "#leaderboard"}
-            style={{
-              fontSize: "12px",
-              color: "var(--dim)",
-              textDecoration: "none",
-              letterSpacing: "1.5px",
-              textTransform: "uppercase",
-              fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
-              transition: "color 0.2s",
-            }}
-            onMouseEnter={(e) =>
-              (e.currentTarget.style.color = "var(--text)")
-            }
-            onMouseLeave={(e) =>
-              (e.currentTarget.style.color = "var(--dim)")
-            }
-          >
-            {label}
-          </Link>
-        ))}
+        {[
+          { label: "Debates",  href: "/#debates" },
+          { label: "Format",   href: "/#how"     },
+          { label: "Rankings", href: "/rankings" },
+        ].map(({ label, href }) => {
+          const isActive = href.startsWith("/") && !href.startsWith("/#") && pathname === href;
+          return (
+            <Link
+              key={label}
+              href={href}
+              style={{
+                fontSize: "12px",
+                color: isActive ? "var(--g)" : "var(--dim)",
+                textDecoration: "none",
+                letterSpacing: "1.5px",
+                textTransform: "uppercase",
+                fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+                transition: "color 0.2s",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text)")}
+              onMouseLeave={(e) => (e.currentTarget.style.color = isActive ? "var(--g)" : "var(--dim)")}
+            >
+              {label}
+            </Link>
+          );
+        })}
       </div>
 
       {/* Right side */}

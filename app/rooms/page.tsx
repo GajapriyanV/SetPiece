@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 
 type DebateStatus = "live" | "soon";
 
@@ -82,10 +83,12 @@ function RoomRow({ debate }: { debate: Debate }) {
   const isLive = debate.status === "live";
 
   return (
-    <div
+    <Link
+      href={`/rooms/${debate.id}`}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
+        textDecoration: "none", color: "inherit",
         background: hovered ? "#13131a" : "var(--card)",
         borderLeft: `2px solid ${isLive ? "var(--g)" : "var(--border)"}`,
         padding: "24px 32px",
@@ -173,7 +176,7 @@ function RoomRow({ debate }: { debate: Debate }) {
       }}>
         {isLive ? `${debate.phase} →` : "Join Room →"}
       </div>
-    </div>
+    </Link>
   );
 }
 

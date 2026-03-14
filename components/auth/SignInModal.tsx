@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 
 interface SignInModalProps {
   onClose: () => void;
-  onRegister: () => void;
+  onRegister?: () => void;
 }
 
 const OAUTH_BUTTONS = [
@@ -316,20 +317,34 @@ export default function SignInModal({ onClose, onRegister }: SignInModalProps) {
             color: "var(--dim)",
           }}>
             No account?{" "}
-            <button
-              onClick={onRegister}
-              style={{
-                background: "none", border: "none", padding: 0,
-                color: "var(--g)", textDecoration: "none",
-                fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
-                fontSize: "10px", letterSpacing: "1.5px", textTransform: "uppercase",
-                fontWeight: 700, cursor: "pointer", transition: "color 0.2s",
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = "var(--g2)"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = "var(--g)"; }}
-            >
-              Create one — it&apos;s free
-            </button>
+            {onRegister ? (
+              <button
+                onClick={onRegister}
+                style={{
+                  background: "none", border: "none", padding: 0,
+                  color: "var(--g)", textDecoration: "none",
+                  fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+                  fontSize: "10px", letterSpacing: "1.5px", textTransform: "uppercase",
+                  fontWeight: 700, cursor: "pointer", transition: "color 0.2s",
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = "var(--g2)"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = "var(--g)"; }}
+              >
+                Create one — it&apos;s free
+              </button>
+            ) : (
+              <Link
+                href="/register"
+                style={{
+                  color: "var(--g)", textDecoration: "none",
+                  fontWeight: 700, transition: "color 0.2s",
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = "var(--g2)"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = "var(--g)"; }}
+              >
+                Create one — it&apos;s free
+              </Link>
+            )}
           </div>
 
         </div>

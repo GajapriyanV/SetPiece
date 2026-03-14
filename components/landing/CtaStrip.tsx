@@ -32,7 +32,6 @@ export default function CtaStrip() {
     {showSignIn && (
       <SignInModal
         onClose={() => setShowSignIn(false)}
-        onRegister={() => setShowSignIn(false)}
       />
     )}
     <section style={{

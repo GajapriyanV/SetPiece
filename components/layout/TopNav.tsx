@@ -4,25 +4,16 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import SignInModal from "@/components/auth/SignInModal";
-import RegisterModal from "@/components/auth/RegisterModal";
 
 export default function TopNav() {
   const pathname = usePathname();
   const [showSignIn, setShowSignIn] = useState(false);
-  const [showRegister, setShowRegister] = useState(false);
 
   return (
     <>
     {showSignIn && (
       <SignInModal
         onClose={() => setShowSignIn(false)}
-        onRegister={() => { setShowSignIn(false); setShowRegister(true); }}
-      />
-    )}
-    {showRegister && (
-      <RegisterModal
-        onClose={() => setShowRegister(false)}
-        onSignIn={() => { setShowRegister(false); setShowSignIn(true); }}
       />
     )}
     <nav
@@ -133,8 +124,8 @@ export default function TopNav() {
         >
           Sign In
         </button>
-        <button
-          onClick={() => setShowRegister(true)}
+        <Link
+          href="/register"
           style={{
             background: "var(--g)",
             color: "#000",
@@ -145,9 +136,8 @@ export default function TopNav() {
             letterSpacing: "1.5px",
             textTransform: "uppercase",
             fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
-            border: "none",
+            textDecoration: "none",
             transition: "all 0.2s",
-            cursor: "pointer",
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.background = "var(--g2)";
@@ -157,7 +147,7 @@ export default function TopNav() {
           }}
         >
           Get Started →
-        </button>
+        </Link>
       </div>
     </nav>
     </>

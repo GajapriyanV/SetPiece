@@ -31,7 +31,6 @@ export default function HeroSection() {
     {showSignIn && (
       <SignInModal
         onClose={() => setShowSignIn(false)}
-        onRegister={() => setShowSignIn(false)}
       />
     )}
     <section

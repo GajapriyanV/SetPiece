@@ -97,6 +97,7 @@ export default function RegisterModal({ onClose, onSignIn }: RegisterModalProps)
         borderRadius: "4px",
         overflow: "hidden",
         position: "relative",
+        animation: "fu 0.35s ease forwards",
       }}>
 
         {/* Top bar */}

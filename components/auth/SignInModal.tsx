@@ -335,6 +335,7 @@ export default function SignInModal({ onClose, onRegister }: SignInModalProps) {
             ) : (
               <Link
                 href="/register"
+                onClick={onClose}
                 style={{
                   color: "var(--g)", textDecoration: "none",
                   fontWeight: 700, transition: "color 0.2s",

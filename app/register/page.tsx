@@ -51,7 +51,7 @@ const labelStyle: React.CSSProperties = {
   display: "block",
   fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
   fontSize: "9px", color: "var(--dim)", letterSpacing: "2px",
-  textTransform: "uppercase", marginBottom: "8px",
+  textTransform: "uppercase", marginBottom: "6px",
 };
 
 const STEP_TITLES = [
@@ -73,7 +73,7 @@ export default function RegisterPage() {
     setForm(prev => ({ ...prev, [key]: e.target.value }));
 
   const inputStyle = (key: string): React.CSSProperties => ({
-    width: "100%", padding: "12px 14px",
+    width: "100%", padding: "10px 14px",
     background: "var(--dark2)",
     border: `1px solid ${focused === key ? "var(--g)" : "var(--border2)"}`,
     borderRadius: "2px", outline: "none",
@@ -83,13 +83,29 @@ export default function RegisterPage() {
     boxSizing: "border-box",
   });
 
+  const backBtn: React.CSSProperties = {
+    flex: 1, padding: "12px", background: "transparent", color: "var(--dim)",
+    border: "1px solid var(--border2)", borderRadius: "2px",
+    fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+    fontSize: "12px", fontWeight: 700, letterSpacing: "3px",
+    textTransform: "uppercase", cursor: "pointer", transition: "all 0.2s",
+  };
+
+  const nextBtn: React.CSSProperties = {
+    flex: 2, padding: "12px", background: "var(--g)", color: "#000",
+    border: "none", borderRadius: "2px",
+    fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+    fontSize: "12px", fontWeight: 700, letterSpacing: "3px",
+    textTransform: "uppercase", cursor: "pointer", transition: "background 0.2s",
+  };
+
   const { heading, sub } = STEP_TITLES[step - 1];
 
   return (
     <div style={{
       minHeight: "100vh", background: "var(--dark)",
       display: "flex", alignItems: "center", justifyContent: "center",
-      padding: "80px 20px 40px",
+      padding: "70px 20px 20px",
     }}>
       <div style={{
         width: "100%", maxWidth: "500px",
@@ -100,7 +116,7 @@ export default function RegisterPage() {
         {/* Top bar */}
         <div style={{
           display: "flex", alignItems: "center", justifyContent: "space-between",
-          padding: "20px 24px", borderBottom: "1px solid var(--border)",
+          padding: "14px 24px", borderBottom: "1px solid var(--border)",
         }}>
           <div style={{
             fontFamily: "var(--font-oswald, 'Oswald', sans-serif)",
@@ -120,21 +136,21 @@ export default function RegisterPage() {
         </div>
 
         {/* Body */}
-        <div style={{ padding: "28px 24px 24px" }}>
+        <div style={{ padding: "16px 24px" }}>
 
           {/* Heading */}
           <h2 style={{
             fontFamily: "var(--font-display, 'Big Shoulders Display', sans-serif)",
-            fontSize: "48px", fontWeight: 900, textTransform: "uppercase",
+            fontSize: "36px", fontWeight: 900, textTransform: "uppercase",
             letterSpacing: "-1px", lineHeight: 1, color: "var(--text)",
-            marginBottom: "8px",
+            marginBottom: "4px",
           }}>
             {heading}
           </h2>
           <p style={{
             fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
             fontSize: "10px", color: "var(--dim)", letterSpacing: "2px",
-            textTransform: "uppercase", marginBottom: "28px",
+            textTransform: "uppercase", marginBottom: "16px",
           }}>
             {sub}
           </p>
@@ -143,13 +159,13 @@ export default function RegisterPage() {
           {step === 1 && (
             <>
               {/* OAuth */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "24px" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "16px" }}>
                 {OAUTH_BUTTONS.map((btn) => (
                   <button
                     key={btn.label}
                     style={{
                       display: "flex", alignItems: "center", justifyContent: "center",
-                      gap: "12px", width: "100%", padding: "14px",
+                      gap: "12px", width: "100%", padding: "10px",
                       background: "var(--dark2)", border: "1px solid var(--border2)",
                       borderRadius: "2px",
                       fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
@@ -172,31 +188,31 @@ export default function RegisterPage() {
               </div>
 
               {/* OR divider */}
-              <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "24px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "16px" }}>
                 <div style={{ flex: 1, height: "1px", background: "var(--border)" }} />
                 <span style={{ fontFamily: "var(--font-mono, 'Roboto Mono', monospace)", fontSize: "10px", color: "var(--dim)", letterSpacing: "3px" }}>OR</span>
                 <div style={{ flex: 1, height: "1px", background: "var(--border)" }} />
               </div>
 
-              <div style={{ marginBottom: "14px" }}>
+              <div style={{ marginBottom: "10px" }}>
                 <label style={labelStyle}>Username</label>
                 <input type="text" placeholder="your_handle" value={form.username}
                   onChange={set("username")} onFocus={() => setFocused("username")} onBlur={() => setFocused("")}
                   style={inputStyle("username")} />
               </div>
-              <div style={{ marginBottom: "14px" }}>
+              <div style={{ marginBottom: "10px" }}>
                 <label style={labelStyle}>Email</label>
                 <input type="email" placeholder="you@example.com" value={form.email}
                   onChange={set("email")} onFocus={() => setFocused("email")} onBlur={() => setFocused("")}
                   style={inputStyle("email")} />
               </div>
-              <div style={{ marginBottom: "14px" }}>
+              <div style={{ marginBottom: "10px" }}>
                 <label style={labelStyle}>Password</label>
                 <input type="password" placeholder="········" value={form.password}
                   onChange={set("password")} onFocus={() => setFocused("password")} onBlur={() => setFocused("")}
                   style={{ ...inputStyle("password"), letterSpacing: "2px" }} />
               </div>
-              <div style={{ marginBottom: "28px" }}>
+              <div style={{ marginBottom: "16px" }}>
                 <label style={labelStyle}>Confirm Password</label>
                 <input type="password" placeholder="········" value={form.confirm}
                   onChange={set("confirm")} onFocus={() => setFocused("confirm")} onBlur={() => setFocused("")}
@@ -205,13 +221,7 @@ export default function RegisterPage() {
 
               <button
                 onClick={() => setStep(2)}
-                style={{
-                  width: "100%", padding: "16px", background: "var(--g)", color: "#000",
-                  border: "none", borderRadius: "2px",
-                  fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
-                  fontSize: "13px", fontWeight: 700, letterSpacing: "3px",
-                  textTransform: "uppercase", cursor: "pointer", transition: "background 0.2s",
-                }}
+                style={{ ...nextBtn, flex: "unset", width: "100%" }}
                 onMouseEnter={(e) => { e.currentTarget.style.background = "var(--g2)"; }}
                 onMouseLeave={(e) => { e.currentTarget.style.background = "var(--g)"; }}
               >
@@ -223,13 +233,13 @@ export default function RegisterPage() {
           {/* ── Step 2 ── */}
           {step === 2 && (
             <>
-              <div style={{ marginBottom: "14px" }}>
+              <div style={{ marginBottom: "10px" }}>
                 <label style={labelStyle}>Full Name</label>
                 <input type="text" placeholder="Your name" value={form.name}
                   onChange={set("name")} onFocus={() => setFocused("name")} onBlur={() => setFocused("")}
                   style={inputStyle("name")} />
               </div>
-              <div style={{ marginBottom: "14px" }}>
+              <div style={{ marginBottom: "10px" }}>
                 <label style={labelStyle}>Country</label>
                 <select value={form.country} onChange={set("country")}
                   onFocus={() => setFocused("country")} onBlur={() => setFocused("")}
@@ -238,7 +248,7 @@ export default function RegisterPage() {
                   {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
-              <div style={{ marginBottom: "28px" }}>
+              <div style={{ marginBottom: "16px" }}>
                 <label style={labelStyle}>Favourite Club</label>
                 <select value={form.club} onChange={set("club")}
                   onFocus={() => setFocused("club")} onBlur={() => setFocused("")}
@@ -249,34 +259,16 @@ export default function RegisterPage() {
               </div>
 
               <div style={{ display: "flex", gap: "12px" }}>
-                <button
+                <button style={backBtn}
                   onClick={() => setStep(1)}
-                  style={{
-                    flex: 1, padding: "16px", background: "transparent", color: "var(--dim)",
-                    border: "1px solid var(--border2)", borderRadius: "2px",
-                    fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
-                    fontSize: "13px", fontWeight: 700, letterSpacing: "3px",
-                    textTransform: "uppercase", cursor: "pointer", transition: "all 0.2s",
-                  }}
                   onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--dim)"; e.currentTarget.style.color = "var(--text)"; }}
                   onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--border2)"; e.currentTarget.style.color = "var(--dim)"; }}
-                >
-                  ← Back
-                </button>
-                <button
+                >← Back</button>
+                <button style={nextBtn}
                   onClick={() => setStep(3)}
-                  style={{
-                    flex: 2, padding: "16px", background: "var(--g)", color: "#000",
-                    border: "none", borderRadius: "2px",
-                    fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
-                    fontSize: "13px", fontWeight: 700, letterSpacing: "3px",
-                    textTransform: "uppercase", cursor: "pointer", transition: "background 0.2s",
-                  }}
                   onMouseEnter={(e) => { e.currentTarget.style.background = "var(--g2)"; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = "var(--g)"; }}
-                >
-                  Continue →
-                </button>
+                >Continue →</button>
               </div>
             </>
           )}
@@ -284,89 +276,60 @@ export default function RegisterPage() {
           {/* ── Step 3 ── */}
           {step === 3 && (
             <>
-              {/* Summary */}
               <div style={{
                 border: "1px solid var(--border2)", borderRadius: "2px",
-                overflow: "hidden", marginBottom: "28px",
+                overflow: "hidden", marginBottom: "16px",
               }}>
                 {[
-                  { label: "Username",  value: form.username  || "—" },
-                  { label: "Email",     value: form.email     || "—" },
-                  { label: "Full Name", value: form.name      || "—" },
-                  { label: "Country",   value: form.country   || "—" },
-                  { label: "Club",      value: form.club      || "—" },
+                  { label: "Username",  value: form.username || "—" },
+                  { label: "Email",     value: form.email    || "—" },
+                  { label: "Full Name", value: form.name     || "—" },
+                  { label: "Country",   value: form.country  || "—" },
+                  { label: "Club",      value: form.club     || "—" },
                 ].map(({ label, value }, i) => (
-                  <div
-                    key={label}
-                    style={{
-                      display: "flex", justifyContent: "space-between", alignItems: "center",
-                      padding: "14px 16px",
-                      borderTop: i === 0 ? "none" : "1px solid var(--border)",
-                      background: i % 2 === 0 ? "var(--dark2)" : "var(--card)",
-                    }}
-                  >
+                  <div key={label} style={{
+                    display: "flex", justifyContent: "space-between", alignItems: "center",
+                    padding: "12px 16px",
+                    borderTop: i === 0 ? "none" : "1px solid var(--border)",
+                    background: i % 2 === 0 ? "var(--dark2)" : "var(--card)",
+                  }}>
                     <span style={{
                       fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
                       fontSize: "9px", color: "var(--dim)",
                       letterSpacing: "2px", textTransform: "uppercase",
-                    }}>
-                      {label}
-                    </span>
+                    }}>{label}</span>
                     <span style={{
                       fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
                       fontSize: "12px", color: "var(--text)", letterSpacing: "1px",
-                    }}>
-                      {value}
-                    </span>
+                    }}>{value}</span>
                   </div>
                 ))}
               </div>
 
               <div style={{ display: "flex", gap: "12px" }}>
-                <button
+                <button style={backBtn}
                   onClick={() => setStep(2)}
-                  style={{
-                    flex: 1, padding: "16px", background: "transparent", color: "var(--dim)",
-                    border: "1px solid var(--border2)", borderRadius: "2px",
-                    fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
-                    fontSize: "13px", fontWeight: 700, letterSpacing: "3px",
-                    textTransform: "uppercase", cursor: "pointer", transition: "all 0.2s",
-                  }}
                   onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--dim)"; e.currentTarget.style.color = "var(--text)"; }}
                   onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--border2)"; e.currentTarget.style.color = "var(--dim)"; }}
-                >
-                  ← Back
-                </button>
-                <button
+                >← Back</button>
+                <button style={nextBtn}
                   onClick={() => router.push("/")}
-                  style={{
-                    flex: 2, padding: "16px", background: "var(--g)", color: "#000",
-                    border: "none", borderRadius: "2px",
-                    fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
-                    fontSize: "13px", fontWeight: 700, letterSpacing: "3px",
-                    textTransform: "uppercase", cursor: "pointer", transition: "background 0.2s",
-                  }}
                   onMouseEnter={(e) => { e.currentTarget.style.background = "var(--g2)"; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = "var(--g)"; }}
-                >
-                  Create Account →
-                </button>
+                >Create Account →</button>
               </div>
             </>
           )}
         </div>
 
         {/* Progress bar */}
-        <div style={{ display: "flex", gap: "2px", padding: "16px 24px", borderTop: "1px solid var(--border)" }}>
+        <div style={{ display: "flex", gap: "2px", padding: "10px 24px", borderTop: "1px solid var(--border)" }}>
           {[1, 2, 3].map((s) => (
-            <div
-              key={s}
-              style={{
-                flex: 1, height: "3px", borderRadius: "2px",
-                background: s <= step ? "var(--g)" : "var(--border2)",
-                transition: "background 0.3s",
-              }}
-            />
+            <div key={s} style={{
+              flex: 1, height: "3px", borderRadius: "2px",
+              background: s <= step ? "var(--g)" : "var(--border2)",
+              transition: "background 0.3s",
+            }} />
           ))}
         </div>
 

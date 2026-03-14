@@ -90,7 +90,7 @@ export default function LeaderboardPreview() {
               Every debate is on the record. Win consistently and your name rises here. The leaderboard updates in real time after every result.
             </p>
             <Link
-              href="/leaderboard"
+              href="/rankings"
               style={{
                 display: "inline-flex",
                 alignItems: "center",

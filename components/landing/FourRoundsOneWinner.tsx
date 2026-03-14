@@ -290,7 +290,7 @@ export default function FourRoundsOneWinner() {
   }, []);
 
   return (
-    <section style={{
+    <section id="format" style={{
       background: "var(--dark2)",
       borderBottom: "1px solid var(--border)",
       padding: "100px 44px",

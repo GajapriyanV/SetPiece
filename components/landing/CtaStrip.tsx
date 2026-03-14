@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import SignInModal from "@/components/auth/SignInModal";
 
 const QUICK_LINKS = [
   { label: "Watch a live debate", sub: "See how it works in real time", href: "#debates", icon: "▶" },
@@ -11,6 +12,7 @@ const QUICK_LINKS = [
 
 export default function CtaStrip() {
   const ref = useRef<HTMLDivElement>(null);
+  const [showSignIn, setShowSignIn] = useState(false);
 
   useEffect(() => {
     const obs = new IntersectionObserver(
@@ -26,6 +28,12 @@ export default function CtaStrip() {
   }, []);
 
   return (
+    <>
+    {showSignIn && (
+      <SignInModal
+        onClose={() => setShowSignIn(false)}
+      />
+    )}
     <section style={{
       padding: "100px 44px",
       background: "var(--dark)",
@@ -101,8 +109,8 @@ export default function CtaStrip() {
             </h2>
 
             {/* CTA button */}
-            <Link
-              href="/register"
+            <button
+              onClick={() => setShowSignIn(true)}
               style={{
                 display: "inline-flex",
                 alignItems: "center",
@@ -116,7 +124,8 @@ export default function CtaStrip() {
                 fontWeight: 800,
                 letterSpacing: "2px",
                 textTransform: "uppercase",
-                textDecoration: "none",
+                background: "transparent",
+                cursor: "pointer",
                 transition: "all 0.2s",
                 position: "relative",
                 zIndex: 1,
@@ -131,7 +140,7 @@ export default function CtaStrip() {
               }}
             >
               Enter The Pitch →
-            </Link>
+            </button>
           </div>
 
           {/* Right panel — quick links */}
@@ -230,5 +239,6 @@ export default function CtaStrip() {
         </div>
       </div>
     </section>
+    </>
   );
 }

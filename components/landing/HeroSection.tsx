@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
+import SignInModal from "@/components/auth/SignInModal";
 
 const BASE_TICKER = [
   { icon: "⚽", topic: "Messi vs Ronaldo", category: "GOAT Debate" },
@@ -15,6 +15,7 @@ const TICKER_ITEMS = [...BASE_TICKER, ...BASE_TICKER];
 
 export default function HeroSection() {
   const counterRef = useRef<HTMLSpanElement>(null);
+  const [showSignIn, setShowSignIn] = useState(false);
 
   useEffect(() => {
     let count = 847;
@@ -26,6 +27,12 @@ export default function HeroSection() {
   }, []);
 
   return (
+    <>
+    {showSignIn && (
+      <SignInModal
+        onClose={() => setShowSignIn(false)}
+      />
+    )}
     <section
       style={{
         minHeight: "100vh",
@@ -253,8 +260,8 @@ export default function HeroSection() {
             fontSize: "9px", letterSpacing: "2px", textTransform: "uppercase",
             color: "var(--g)", marginBottom: "12px",
           }}>Ready To Debate?</div>
-          <Link
-            href="/register"
+          <button
+            onClick={() => setShowSignIn(true)}
             style={{
               display: "inline-flex", alignItems: "center", gap: "8px",
               background: "var(--g)", color: "#000",
@@ -262,7 +269,7 @@ export default function HeroSection() {
               fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
               fontSize: "12px", fontWeight: 700,
               letterSpacing: "1px", textTransform: "uppercase",
-              textDecoration: "none", transition: "all 0.2s",
+              border: "none", cursor: "pointer", transition: "all 0.2s",
               width: "fit-content",
             }}
             onMouseEnter={(e) => {
@@ -275,7 +282,7 @@ export default function HeroSection() {
             }}
           >
             Enter pitch →
-          </Link>
+          </button>
         </div>
       </div>
 
@@ -315,5 +322,6 @@ export default function HeroSection() {
         </div>
       </div>
     </section>
+    </>
   );
 }

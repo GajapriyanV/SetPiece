@@ -11,7 +11,11 @@ export default function TopNav() {
 
   return (
     <>
-    {showSignIn && <SignInModal onClose={() => setShowSignIn(false)} />}
+    {showSignIn && (
+      <SignInModal
+        onClose={() => setShowSignIn(false)}
+      />
+    )}
     <nav
       style={{
         position: "fixed",
@@ -30,7 +34,14 @@ export default function TopNav() {
       }}
     >
       {/* Logo */}
-      <div
+      <Link
+        href="/"
+        onClick={(e) => {
+          if (pathname === "/") {
+            e.preventDefault();
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }
+        }}
         style={{
           fontFamily: "var(--font-oswald, 'Oswald', sans-serif)",
           fontSize: "17px",
@@ -41,10 +52,12 @@ export default function TopNav() {
           display: "flex",
           alignItems: "center",
           gap: "2px",
+          textDecoration: "none",
+          cursor: "pointer",
         }}
       >
         SET<span style={{ color: "var(--g)", fontWeight: 300 }}>/</span>PIECE
-      </div>
+      </Link>
 
       {/* Center links */}
       <div
@@ -58,7 +71,7 @@ export default function TopNav() {
       >
         {[
           { label: "Debates",  href: "/#debates" },
-          { label: "Format",   href: "/#how"     },
+          { label: "Format",   href: "/#format"  },
           { label: "Rankings", href: "/rankings" },
         ].map(({ label, href }) => {
           const isActive = href.startsWith("/") && !href.startsWith("/#") && pathname === href;
@@ -122,8 +135,8 @@ export default function TopNav() {
             fontWeight: 700,
             letterSpacing: "1.5px",
             textTransform: "uppercase",
-            textDecoration: "none",
             fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+            textDecoration: "none",
             transition: "all 0.2s",
           }}
           onMouseEnter={(e) => {

@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 
-interface SignInModalProps {
+interface RegisterModalProps {
   onClose: () => void;
-  onRegister: () => void;
+  onSignIn?: () => void;
 }
 
 const OAUTH_BUTTONS = [
@@ -37,26 +38,45 @@ const OAUTH_BUTTONS = [
   },
 ];
 
-export default function SignInModal({ onClose, onRegister }: SignInModalProps) {
+export default function RegisterModal({ onClose, onSignIn }: RegisterModalProps) {
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [remember, setRemember] = useState(false);
+  const [confirm, setConfirm] = useState("");
+  const [usernameFocused, setUsernameFocused] = useState(false);
   const [emailFocused, setEmailFocused] = useState(false);
   const [passFocused, setPassFocused] = useState(false);
+  const [confirmFocused, setConfirmFocused] = useState(false);
   const overlayRef = useRef<HTMLDivElement>(null);
 
-  // Lock body scroll
   useEffect(() => {
     document.body.style.overflow = "hidden";
     return () => { document.body.style.overflow = ""; };
   }, []);
 
-  // Close on Escape
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [onClose]);
+
+  const inputStyle = (focused: boolean) => ({
+    width: "100%", padding: "12px 14px",
+    background: "var(--dark2)",
+    border: `1px solid ${focused ? "var(--g)" : "var(--border2)"}`,
+    borderRadius: "2px", outline: "none",
+    fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+    fontSize: "12px", color: "var(--text)",
+    letterSpacing: "1px",
+    transition: "border-color 0.2s",
+  });
+
+  const labelStyle = {
+    display: "block",
+    fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+    fontSize: "9px", color: "var(--dim)", letterSpacing: "2px",
+    textTransform: "uppercase" as const, marginBottom: "8px",
+  };
 
   return (
     <div
@@ -79,7 +99,7 @@ export default function SignInModal({ onClose, onRegister }: SignInModalProps) {
         position: "relative",
       }}>
 
-        {/* Top bar — logo + close */}
+        {/* Top bar */}
         <div style={{
           display: "flex", alignItems: "center", justifyContent: "space-between",
           padding: "20px 24px",
@@ -122,21 +142,20 @@ export default function SignInModal({ onClose, onRegister }: SignInModalProps) {
         {/* Body */}
         <div style={{ padding: "28px 24px 24px" }}>
 
-          {/* Heading */}
           <h2 style={{
             fontFamily: "var(--font-display, 'Big Shoulders Display', sans-serif)",
             fontSize: "48px", fontWeight: 900, textTransform: "uppercase",
             letterSpacing: "-1px", lineHeight: 1, color: "var(--text)",
             marginBottom: "8px",
           }}>
-            Sign In
+            Create Account
           </h2>
           <p style={{
             fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
             fontSize: "10px", color: "var(--dim)", letterSpacing: "2px",
             textTransform: "uppercase", marginBottom: "28px",
           }}>
-            Welcome back — pick up where you left off
+            Join the debate — free forever
           </p>
 
           {/* OAuth buttons */}
@@ -184,16 +203,23 @@ export default function SignInModal({ onClose, onRegister }: SignInModalProps) {
             <div style={{ flex: 1, height: "1px", background: "var(--border)" }} />
           </div>
 
+          {/* Username */}
+          <div style={{ marginBottom: "14px" }}>
+            <label style={labelStyle}>Username</label>
+            <input
+              type="text"
+              placeholder="your_handle"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              onFocus={() => setUsernameFocused(true)}
+              onBlur={() => setUsernameFocused(false)}
+              style={inputStyle(usernameFocused)}
+            />
+          </div>
+
           {/* Email */}
           <div style={{ marginBottom: "14px" }}>
-            <label style={{
-              display: "block",
-              fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
-              fontSize: "9px", color: "var(--dim)", letterSpacing: "2px",
-              textTransform: "uppercase", marginBottom: "8px",
-            }}>
-              Email
-            </label>
+            <label style={labelStyle}>Email</label>
             <input
               type="email"
               placeholder="you@example.com"
@@ -201,29 +227,13 @@ export default function SignInModal({ onClose, onRegister }: SignInModalProps) {
               onChange={(e) => setEmail(e.target.value)}
               onFocus={() => setEmailFocused(true)}
               onBlur={() => setEmailFocused(false)}
-              style={{
-                width: "100%", padding: "12px 14px",
-                background: "var(--dark2)",
-                border: `1px solid ${emailFocused ? "var(--g)" : "var(--border2)"}`,
-                borderRadius: "2px", outline: "none",
-                fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
-                fontSize: "12px", color: "var(--text)",
-                letterSpacing: "1px",
-                transition: "border-color 0.2s",
-              }}
+              style={inputStyle(emailFocused)}
             />
           </div>
 
           {/* Password */}
-          <div style={{ marginBottom: "16px" }}>
-            <label style={{
-              display: "block",
-              fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
-              fontSize: "9px", color: "var(--dim)", letterSpacing: "2px",
-              textTransform: "uppercase", marginBottom: "8px",
-            }}>
-              Password
-            </label>
+          <div style={{ marginBottom: "14px" }}>
+            <label style={labelStyle}>Password</label>
             <input
               type="password"
               placeholder="········"
@@ -231,66 +241,25 @@ export default function SignInModal({ onClose, onRegister }: SignInModalProps) {
               onChange={(e) => setPassword(e.target.value)}
               onFocus={() => setPassFocused(true)}
               onBlur={() => setPassFocused(false)}
-              style={{
-                width: "100%", padding: "12px 14px",
-                background: "var(--dark2)",
-                border: `1px solid ${passFocused ? "var(--g)" : "var(--border2)"}`,
-                borderRadius: "2px", outline: "none",
-                fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
-                fontSize: "12px", color: "var(--text)",
-                letterSpacing: "2px",
-                transition: "border-color 0.2s",
-              }}
+              style={{ ...inputStyle(passFocused), letterSpacing: "2px" }}
             />
           </div>
 
-          {/* Remember me + Forgot password */}
-          <div style={{
-            display: "flex", alignItems: "center", justifyContent: "space-between",
-            marginBottom: "24px",
-          }}>
-            <label style={{
-              display: "flex", alignItems: "center", gap: "10px",
-              cursor: "pointer",
-              fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
-              fontSize: "10px", color: "var(--dim)", letterSpacing: "1.5px",
-              textTransform: "uppercase",
-            }}>
-              <div
-                onClick={() => setRemember(!remember)}
-                style={{
-                  width: "16px", height: "16px",
-                  border: `1px solid ${remember ? "var(--g)" : "var(--border2)"}`,
-                  borderRadius: "2px",
-                  background: remember ? "var(--g)" : "transparent",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  flexShrink: 0, transition: "all 0.2s", cursor: "pointer",
-                }}
-              >
-                {remember && (
-                  <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-                    <path d="M1 4l3 3 5-6" stroke="#000" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                )}
-              </div>
-              Remember me
-            </label>
-            <a
-              href="#"
-              style={{
-                fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
-                fontSize: "10px", color: "var(--dim)", letterSpacing: "1.5px",
-                textTransform: "uppercase", textDecoration: "none",
-                transition: "color 0.2s",
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = "var(--text)"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = "var(--dim)"; }}
-            >
-              Forgot Password?
-            </a>
+          {/* Confirm Password */}
+          <div style={{ marginBottom: "24px" }}>
+            <label style={labelStyle}>Confirm Password</label>
+            <input
+              type="password"
+              placeholder="········"
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+              onFocus={() => setConfirmFocused(true)}
+              onBlur={() => setConfirmFocused(false)}
+              style={{ ...inputStyle(confirmFocused), letterSpacing: "2px" }}
+            />
           </div>
 
-          {/* Sign in button */}
+          {/* Submit */}
           <button
             style={{
               width: "100%", padding: "16px",
@@ -305,31 +274,46 @@ export default function SignInModal({ onClose, onRegister }: SignInModalProps) {
             onMouseEnter={(e) => { e.currentTarget.style.background = "var(--g2)"; }}
             onMouseLeave={(e) => { e.currentTarget.style.background = "var(--g)"; }}
           >
-            Sign In →
+            Create Account →
           </button>
 
-          {/* No account */}
+          {/* Already have account */}
           <div style={{
             textAlign: "center",
             fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
             fontSize: "10px", letterSpacing: "1.5px", textTransform: "uppercase",
             color: "var(--dim)",
           }}>
-            No account?{" "}
-            <button
-              onClick={onRegister}
-              style={{
-                background: "none", border: "none", padding: 0,
-                color: "var(--g)", textDecoration: "none",
-                fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
-                fontSize: "10px", letterSpacing: "1.5px", textTransform: "uppercase",
-                fontWeight: 700, cursor: "pointer", transition: "color 0.2s",
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = "var(--g2)"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = "var(--g)"; }}
-            >
-              Create one — it&apos;s free
-            </button>
+            Already have an account?{" "}
+            {onSignIn ? (
+              <button
+                onClick={onSignIn}
+                style={{
+                  background: "none", border: "none", padding: 0,
+                  color: "var(--g)", textDecoration: "none",
+                  fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+                  fontSize: "10px", letterSpacing: "1.5px", textTransform: "uppercase",
+                  fontWeight: 700, cursor: "pointer", transition: "color 0.2s",
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = "var(--g2)"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = "var(--g)"; }}
+              >
+                Sign in
+              </button>
+            ) : (
+              <Link
+                href="/"
+                onClick={onClose}
+                style={{
+                  color: "var(--g)", textDecoration: "none",
+                  fontWeight: 700, transition: "color 0.2s",
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = "var(--g2)"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = "var(--g)"; }}
+              >
+                Sign in
+              </Link>
+            )}
           </div>
 
         </div>

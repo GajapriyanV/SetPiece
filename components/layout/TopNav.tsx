@@ -4,14 +4,27 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import SignInModal from "@/components/auth/SignInModal";
+import RegisterModal from "@/components/auth/RegisterModal";
 
 export default function TopNav() {
   const pathname = usePathname();
   const [showSignIn, setShowSignIn] = useState(false);
+  const [showRegister, setShowRegister] = useState(false);
 
   return (
     <>
-    {showSignIn && <SignInModal onClose={() => setShowSignIn(false)} />}
+    {showSignIn && (
+      <SignInModal
+        onClose={() => setShowSignIn(false)}
+        onRegister={() => { setShowSignIn(false); setShowRegister(true); }}
+      />
+    )}
+    {showRegister && (
+      <RegisterModal
+        onClose={() => setShowRegister(false)}
+        onSignIn={() => { setShowRegister(false); setShowSignIn(true); }}
+      />
+    )}
     <nav
       style={{
         position: "fixed",
@@ -30,7 +43,14 @@ export default function TopNav() {
       }}
     >
       {/* Logo */}
-      <div
+      <Link
+        href="/"
+        onClick={(e) => {
+          if (pathname === "/") {
+            e.preventDefault();
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }
+        }}
         style={{
           fontFamily: "var(--font-oswald, 'Oswald', sans-serif)",
           fontSize: "17px",
@@ -41,10 +61,12 @@ export default function TopNav() {
           display: "flex",
           alignItems: "center",
           gap: "2px",
+          textDecoration: "none",
+          cursor: "pointer",
         }}
       >
         SET<span style={{ color: "var(--g)", fontWeight: 300 }}>/</span>PIECE
-      </div>
+      </Link>
 
       {/* Center links */}
       <div
@@ -58,7 +80,7 @@ export default function TopNav() {
       >
         {[
           { label: "Debates",  href: "/#debates" },
-          { label: "Format",   href: "/#how"     },
+          { label: "Format",   href: "/#format"  },
           { label: "Rankings", href: "/rankings" },
         ].map(({ label, href }) => {
           const isActive = href.startsWith("/") && !href.startsWith("/#") && pathname === href;
@@ -111,8 +133,8 @@ export default function TopNav() {
         >
           Sign In
         </button>
-        <Link
-          href="/register"
+        <button
+          onClick={() => setShowRegister(true)}
           style={{
             background: "var(--g)",
             color: "#000",
@@ -122,9 +144,10 @@ export default function TopNav() {
             fontWeight: 700,
             letterSpacing: "1.5px",
             textTransform: "uppercase",
-            textDecoration: "none",
             fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+            border: "none",
             transition: "all 0.2s",
+            cursor: "pointer",
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.background = "var(--g2)";
@@ -134,7 +157,7 @@ export default function TopNav() {
           }}
         >
           Get Started →
-        </Link>
+        </button>
       </div>
     </nav>
     </>

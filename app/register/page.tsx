@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { createClient } from "@/utils/supabase/client";
 
 const CLUBS = [
   "Arsenal", "Aston Villa", "Atletico Madrid", "Bayern Munich", "Barcelona",
@@ -17,9 +18,10 @@ const COUNTRIES = [
   "Senegal", "Spain", "United States", "Uruguay", "Other",
 ];
 
-const OAUTH_BUTTONS = [
+const OAUTH_PROVIDERS: { label: string; provider: "google" | "twitter" | "discord"; icon: React.ReactNode }[] = [
   {
     label: "Continue with Google",
+    provider: "google",
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
         <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -31,6 +33,7 @@ const OAUTH_BUTTONS = [
   },
   {
     label: "Continue with X / Twitter",
+    provider: "twitter",
     icon: (
       <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
         <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
@@ -39,6 +42,7 @@ const OAUTH_BUTTONS = [
   },
   {
     label: "Continue with Discord",
+    provider: "discord",
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
         <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/>
@@ -54,6 +58,12 @@ const labelStyle: React.CSSProperties = {
   textTransform: "uppercase", marginBottom: "6px",
 };
 
+const errorStyle: React.CSSProperties = {
+  fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+  fontSize: "10px", color: "var(--red)", letterSpacing: "1.5px",
+  textTransform: "uppercase", marginBottom: "12px",
+};
+
 const STEP_TITLES = [
   { heading: "Create Account", sub: "Join the debate — free forever" },
   { heading: "Your Profile",   sub: "Tell us a bit about yourself"   },
@@ -62,8 +72,11 @@ const STEP_TITLES = [
 
 export default function RegisterPage() {
   const router = useRouter();
+  const supabase = createClient();
   const [step, setStep] = useState(1);
   const [focused, setFocused] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const [form, setForm] = useState({
     username: "", email: "", password: "", confirm: "",
     name: "", country: "", club: "",
@@ -99,6 +112,67 @@ export default function RegisterPage() {
     textTransform: "uppercase", cursor: "pointer", transition: "background 0.2s",
   };
 
+  const handleOAuth = async (provider: "google" | "twitter" | "discord") => {
+    setError("");
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: { redirectTo: `${window.location.origin}/` },
+    });
+    if (error) setError(error.message);
+  };
+
+  const handleSignUp = async () => {
+    setError("");
+    if (!form.email || !form.password || !form.username) {
+      setError("Please fill in all fields");
+      return;
+    }
+    if (form.password !== form.confirm) {
+      setError("Passwords do not match");
+      return;
+    }
+    if (form.password.length < 6) {
+      setError("Password must be at least 6 characters");
+      return;
+    }
+    setLoading(true);
+    const { error } = await supabase.auth.signUp({
+      email: form.email,
+      password: form.password,
+      options: {
+        data: { username: form.username },
+      },
+    });
+    setLoading(false);
+    if (error) {
+      setError(error.message);
+      return;
+    }
+    setStep(2);
+  };
+
+  const handleCreateAccount = async () => {
+    setError("");
+    setLoading(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { error } = await supabase.from("profiles").upsert({
+        id: user.id,
+        username: form.username,
+        name: form.name,
+        country: form.country,
+        club: form.club,
+      });
+      if (error) {
+        setLoading(false);
+        setError(error.message);
+        return;
+      }
+    }
+    setLoading(false);
+    router.push("/");
+  };
+
   const { heading, sub } = STEP_TITLES[step - 1];
 
   return (
@@ -111,6 +185,7 @@ export default function RegisterPage() {
         width: "100%", maxWidth: "500px",
         background: "var(--card)", border: "1px solid var(--border2)",
         borderRadius: "4px", overflow: "hidden",
+        animation: "fu 0.7s cubic-bezier(0.16, 1, 0.3, 1) both",
       }}>
 
         {/* Top bar */}
@@ -155,14 +230,17 @@ export default function RegisterPage() {
             {sub}
           </p>
 
+          {error && <div style={errorStyle}>{error}</div>}
+
           {/* ── Step 1 ── */}
           {step === 1 && (
             <>
               {/* OAuth */}
               <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "16px" }}>
-                {OAUTH_BUTTONS.map((btn) => (
+                {OAUTH_PROVIDERS.map((btn) => (
                   <button
                     key={btn.label}
+                    onClick={() => handleOAuth(btn.provider)}
                     style={{
                       display: "flex", alignItems: "center", justifyContent: "center",
                       gap: "12px", width: "100%", padding: "10px",
@@ -220,12 +298,13 @@ export default function RegisterPage() {
               </div>
 
               <button
-                onClick={() => setStep(2)}
-                style={{ ...nextBtn, flex: "unset", width: "100%" }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = "var(--g2)"; }}
+                onClick={handleSignUp}
+                disabled={loading}
+                style={{ ...nextBtn, flex: "unset", width: "100%", opacity: loading ? 0.6 : 1 }}
+                onMouseEnter={(e) => { if (!loading) e.currentTarget.style.background = "var(--g2)"; }}
                 onMouseLeave={(e) => { e.currentTarget.style.background = "var(--g)"; }}
               >
-                Continue →
+                {loading ? "Creating..." : "Continue →"}
               </button>
             </>
           )}
@@ -312,11 +391,13 @@ export default function RegisterPage() {
                   onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--dim)"; e.currentTarget.style.color = "var(--text)"; }}
                   onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--border2)"; e.currentTarget.style.color = "var(--dim)"; }}
                 >← Back</button>
-                <button style={nextBtn}
-                  onClick={() => router.push("/")}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = "var(--g2)"; }}
+                <button
+                  onClick={handleCreateAccount}
+                  disabled={loading}
+                  onMouseEnter={(e) => { if (!loading) e.currentTarget.style.background = "var(--g2)"; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = "var(--g)"; }}
-                >Create Account →</button>
+                  style={{ ...nextBtn, opacity: loading ? 0.6 : 1 }}
+                >{loading ? "Creating..." : "Create Account →"}</button>
               </div>
             </>
           )}

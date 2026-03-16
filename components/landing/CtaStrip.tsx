@@ -2,7 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import SignInModal from "@/components/auth/SignInModal";
+import { createClient } from "@/utils/supabase/client";
 
 const QUICK_LINKS = [
   { label: "Watch a live debate", sub: "See how it works in real time", href: "#debates", icon: "▶" },
@@ -12,7 +14,26 @@ const QUICK_LINKS = [
 
 export default function CtaStrip() {
   const ref = useRef<HTMLDivElement>(null);
+  const router = useRouter();
+  const supabase = createClient();
   const [showSignIn, setShowSignIn] = useState(false);
+  const [user, setUser] = useState<unknown>(null);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setUser(data.user));
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+    return () => subscription.unsubscribe();
+  }, [supabase.auth]);
+
+  const handleEnterPitch = () => {
+    if (user) {
+      router.push("/rooms");
+    } else {
+      setShowSignIn(true);
+    }
+  };
 
   useEffect(() => {
     const obs = new IntersectionObserver(
@@ -110,7 +131,7 @@ export default function CtaStrip() {
 
             {/* CTA button */}
             <button
-              onClick={() => setShowSignIn(true)}
+              onClick={handleEnterPitch}
               style={{
                 display: "inline-flex",
                 alignItems: "center",

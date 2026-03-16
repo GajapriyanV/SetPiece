@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import SignInModal from "@/components/auth/SignInModal";
+import { createClient } from "@/utils/supabase/client";
 
 const BASE_TICKER = [
   { icon: "⚽", topic: "Messi vs Ronaldo", category: "GOAT Debate" },
@@ -15,7 +17,26 @@ const TICKER_ITEMS = [...BASE_TICKER, ...BASE_TICKER];
 
 export default function HeroSection() {
   const counterRef = useRef<HTMLSpanElement>(null);
+  const router = useRouter();
+  const supabase = createClient();
   const [showSignIn, setShowSignIn] = useState(false);
+  const [user, setUser] = useState<unknown>(null);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setUser(data.user));
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+    return () => subscription.unsubscribe();
+  }, [supabase.auth]);
+
+  const handleEnterPitch = () => {
+    if (user) {
+      router.push("/rooms");
+    } else {
+      setShowSignIn(true);
+    }
+  };
 
   useEffect(() => {
     let count = 847;
@@ -261,7 +282,7 @@ export default function HeroSection() {
             color: "var(--g)", marginBottom: "12px",
           }}>Ready To Debate?</div>
           <button
-            onClick={() => setShowSignIn(true)}
+            onClick={handleEnterPitch}
             style={{
               display: "inline-flex", alignItems: "center", gap: "8px",
               background: "var(--g)", color: "#000",

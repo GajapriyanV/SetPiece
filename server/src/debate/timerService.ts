@@ -1,0 +1,129 @@
+import type { Server } from "socket.io";
+import * as store from "../state/roomStore.js";
+import * as voteStore from "../state/voteStore.js";
+import {
+  DEBATE_PHASES,
+  VOTING_DURATION_MS,
+  RESULTS_DISPLAY_MS,
+  getPhaseByIndex,
+  isLastPhase,
+} from "./phaseEngine.js";
+import { tallyAndPersist } from "../voting/voteTally.js";
+import { logger } from "../utils/logger.js";
+
+// Active timers per room
+const timers = new Map<string, NodeJS.Timeout>();
+
+export function clearRoomTimer(roomId: string): void {
+  const existing = timers.get(roomId);
+  if (existing) {
+    clearTimeout(existing);
+    timers.delete(roomId);
+  }
+}
+
+export async function startDebate(roomId: string, debateId: string, io: Server): Promise<void> {
+  // Begin first phase
+  await startPhase(roomId, 0, io);
+}
+
+async function startPhase(roomId: string, index: number, io: Server): Promise<void> {
+  const phase = getPhaseByIndex(index);
+  if (!phase) return;
+
+  const endsAt = Date.now() + phase.durationMs;
+
+  await store.setPhase(roomId, {
+    name: phase.name,
+    speaker: phase.speaker,
+    endsAt,
+    index,
+  });
+
+  await store.updateRoom(roomId, { status: "live" });
+
+  io.to(roomId).emit("debate:phase_change", {
+    phase: phase.name,
+    speaker: phase.speaker,
+    endsAt,
+    index,
+  });
+
+  logger.info({ roomId, phase: phase.name, endsAt }, "Phase started");
+
+  // Schedule next phase or voting
+  clearRoomTimer(roomId);
+  const timer = setTimeout(async () => {
+    timers.delete(roomId);
+
+    if (isLastPhase(index)) {
+      // Debate ended, start voting
+      await startVoting(roomId, io);
+    } else {
+      await startPhase(roomId, index + 1, io);
+    }
+  }, phase.durationMs);
+
+  timers.set(roomId, timer);
+}
+
+async function startVoting(roomId: string, io: Server): Promise<void> {
+  const endsAt = Date.now() + VOTING_DURATION_MS;
+
+  await store.updateRoom(roomId, { status: "voting" });
+  await store.clearPhase(roomId);
+
+  io.to(roomId).emit("debate:ended");
+  io.to(roomId).emit("vote:window_open", { endsAt });
+
+  logger.info({ roomId }, "Voting started");
+
+  // Broadcast vote counts every 5 seconds
+  const countInterval = setInterval(async () => {
+    const counts = await voteStore.getVoteCounts(roomId);
+    io.to(roomId).emit("vote:count_update", {
+      a: counts.a,
+      b: counts.b,
+      total: counts.a + counts.b,
+    });
+  }, 5000);
+
+  clearRoomTimer(roomId);
+  const timer = setTimeout(async () => {
+    clearInterval(countInterval);
+    timers.delete(roomId);
+
+    io.to(roomId).emit("vote:window_closed");
+    await finishDebate(roomId, io);
+  }, VOTING_DURATION_MS);
+
+  timers.set(roomId, timer);
+}
+
+async function finishDebate(roomId: string, io: Server): Promise<void> {
+  await store.updateRoom(roomId, { status: "results" });
+
+  const room = await store.getRoom(roomId);
+  if (!room || !room.debateId) return;
+
+  try {
+    const result = await tallyAndPersist(roomId, room.debateId, io);
+    io.to(roomId).emit("results:final", result);
+    logger.info({ roomId, result: result.result }, "Debate finished");
+  } catch (err) {
+    logger.error({ roomId, err }, "Failed to tally and persist results");
+  }
+
+  // Auto-close room after results display
+  clearRoomTimer(roomId);
+  const timer = setTimeout(async () => {
+    timers.delete(roomId);
+    io.to(roomId).emit("room:closed", { reason: "Debate complete" });
+    await store.deleteRoom(roomId);
+    logger.info({ roomId }, "Room closed after results");
+  }, RESULTS_DISPLAY_MS);
+
+  timers.set(roomId, timer);
+}
+
+export { timers };

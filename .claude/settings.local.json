@@ -20,7 +20,12 @@
       "Bash(find:*)",
       "Bash(npm install:*)",
       "Bash(cd:*)",
-      "WebFetch(domain:supabase.com)"
+      "WebFetch(domain:supabase.com)",
+      "Bash(grep:*)",
+      "Bash(sleep:*)",
+      "Bash(curl:*)",
+      "Bash(netstat:*)",
+      "Bash(taskkill:*)"
     ]
   }
 }

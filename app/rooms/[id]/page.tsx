@@ -159,6 +159,8 @@ export default function RoomPage() {
               sideBLabel={state.sideBLabel}
               members={state.members}
               countdown={state.countdown}
+              roomId={roomId}
+              currentUserId={currentUserId || null}
             />
           )}
 

@@ -1,7 +1,8 @@
 "use client";
 
 import { useServerTimer } from "@/hooks/useServerTimer";
-import type { PhaseState, RoomMember, UserBrief, Side } from "@/types/socket";
+import { useLiveKit } from "@/hooks/useLiveKit";
+import type { PhaseState, RoomMember, UserBrief } from "@/types/socket";
 
 const PHASE_LABELS: Record<string, string> = {
   opening_a: "Opening Statement — Side A",
@@ -58,12 +59,14 @@ function DebaterCard({
   avatar,
   avatarColor,
   active,
+  speaking,
 }: {
   name: string;
   stance: string;
   avatar: string;
   avatarColor: string;
   active: boolean;
+  speaking: boolean;
 }) {
   return (
     <div
@@ -122,7 +125,7 @@ function DebaterCard({
       </div>
 
       <div style={{ height: "24px", display: "flex", alignItems: "center" }}>
-        {active ? <WaveformBars /> : <InactiveDots />}
+        {speaking ? <WaveformBars /> : <InactiveDots />}
       </div>
     </div>
   );
@@ -136,6 +139,8 @@ export default function LiveView({
   sideBLabel,
   members,
   countdown,
+  roomId,
+  currentUserId,
 }: {
   phase: PhaseState | null;
   debaterA: UserBrief | null;
@@ -144,8 +149,11 @@ export default function LiveView({
   sideBLabel: string;
   members: RoomMember[];
   countdown: number | null;
+  roomId: string;
+  currentUserId: string | null;
 }) {
   const secondsLeft = useServerTimer(phase?.endsAt ?? null);
+  const { isSpeaking, canPublish, micEnabled, isReconnecting, needsAudioUnlock, toggleMic, unlockAudio } = useLiveKit(roomId);
 
   // If we're in the starting countdown
   if (countdown !== null && countdown > 0) {
@@ -196,6 +204,45 @@ export default function LiveView({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "36px 40px 0" }}>
+
+      {/* Reconnecting banner */}
+      {isReconnecting && (
+        <div style={{
+          width: "100%", maxWidth: "600px", marginBottom: "20px",
+          padding: "12px 20px",
+          background: "rgba(255,45,85,0.08)",
+          border: "1px solid var(--red)",
+          borderRadius: "4px",
+          display: "flex", alignItems: "center", gap: "10px",
+        }}>
+          <div className="status-dot-live" style={{ width: "6px", height: "6px", borderRadius: "50%", background: "var(--red)", flexShrink: 0 }} />
+          <span style={{ fontFamily: "var(--font-mono, 'Roboto Mono', monospace)", fontSize: "10px", letterSpacing: "2px", textTransform: "uppercase", color: "var(--red)" }}>
+            Reconnecting...
+          </span>
+        </div>
+      )}
+
+      {/* Audio unlock banner — shown when browser blocks autoplay */}
+      {needsAudioUnlock && (
+        <button
+          onClick={unlockAudio}
+          style={{
+            width: "100%", maxWidth: "600px", marginBottom: "20px",
+            padding: "12px 20px",
+            background: "rgba(0,255,135,0.08)",
+            border: "1px solid var(--g)",
+            borderRadius: "4px",
+            display: "flex", alignItems: "center", gap: "10px",
+            cursor: "pointer",
+          }}
+        >
+          <div className="status-dot-live" style={{ width: "6px", height: "6px", borderRadius: "50%", background: "var(--g)", flexShrink: 0 }} />
+          <span style={{ fontFamily: "var(--font-mono, 'Roboto Mono', monospace)", fontSize: "10px", letterSpacing: "2px", textTransform: "uppercase", color: "var(--g)" }}>
+            Click to enable audio
+          </span>
+        </button>
+      )}
+
       {/* Phase label */}
       <div
         style={{
@@ -292,6 +339,7 @@ export default function LiveView({
           avatar={(debaterA?.username ?? "?")[0].toUpperCase()}
           avatarColor="#3b82f6"
           active={activeSide === "a"}
+          speaking={debaterA ? !!isSpeaking[debaterA.userId] : false}
         />
         <div
           style={{
@@ -313,8 +361,40 @@ export default function LiveView({
           avatar={(debaterB?.username ?? "?")[0].toUpperCase()}
           avatarColor="#fb923c"
           active={activeSide === "b"}
+          speaking={debaterB ? !!isSpeaking[debaterB.userId] : false}
         />
       </div>
+
+      {/* Mic toggle — only shown to debaters when it's their turn */}
+      {canPublish && (
+        <div style={{ marginTop: "20px" }}>
+          <button
+            onClick={toggleMic}
+            style={{
+              display: "flex", alignItems: "center", gap: "10px",
+              padding: "12px 24px",
+              background: micEnabled ? "rgba(0,255,135,0.1)" : "var(--card)",
+              border: `1px solid ${micEnabled ? "var(--g)" : "var(--border2)"}`,
+              borderRadius: "4px",
+              cursor: "pointer",
+              transition: "all 0.2s",
+            }}
+          >
+            <div style={{
+              width: "8px", height: "8px", borderRadius: "50%",
+              background: micEnabled ? "var(--g)" : "var(--dim)",
+              animation: micEnabled ? "blink 1s infinite" : "none",
+            }} />
+            <span style={{
+              fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+              fontSize: "10px", letterSpacing: "2px", textTransform: "uppercase",
+              color: micEnabled ? "var(--g)" : "var(--dim)",
+            }}>
+              {micEnabled ? "Mic On — Click to Mute" : "Click to Speak"}
+            </span>
+          </button>
+        </div>
+      )}
 
       {/* Audience section */}
       <div style={{ width: "100%", maxWidth: "600px", marginTop: "32px", paddingBottom: "48px" }}>

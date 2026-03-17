@@ -9,6 +9,7 @@ import {
   isLastPhase,
 } from "./phaseEngine.js";
 import { tallyAndPersist } from "../voting/voteTally.js";
+import { setCanPublish, closeLiveKitRoom } from "../livekit/livekitService.js";
 import { logger } from "../utils/logger.js";
 
 // Active timers per room
@@ -51,6 +52,16 @@ async function startPhase(roomId: string, index: number, io: Server): Promise<vo
 
   logger.info({ roomId, phase: phase.name, endsAt }, "Phase started");
 
+  // Flip LiveKit mic permissions — only the active speaker can publish
+  const room = await store.getRoom(roomId);
+  if (room?.debaterAId && room?.debaterBId) {
+    const aCanPublish = phase.speaker === "a";
+    await Promise.allSettled([
+      setCanPublish(roomId, room.debaterAId, aCanPublish),
+      setCanPublish(roomId, room.debaterBId, !aCanPublish),
+    ]);
+  }
+
   // Schedule next phase or voting
   clearRoomTimer(roomId);
   const timer = setTimeout(async () => {
@@ -72,6 +83,15 @@ async function startVoting(roomId: string, io: Server): Promise<void> {
 
   await store.updateRoom(roomId, { status: "voting" });
   await store.clearPhase(roomId);
+
+  // Mute both debaters — debate is over
+  const room = await store.getRoom(roomId);
+  if (room?.debaterAId && room?.debaterBId) {
+    await Promise.allSettled([
+      setCanPublish(roomId, room.debaterAId, false),
+      setCanPublish(roomId, room.debaterBId, false),
+    ]);
+  }
 
   io.to(roomId).emit("debate:ended");
   io.to(roomId).emit("vote:window_open", { endsAt });
@@ -120,6 +140,7 @@ async function finishDebate(roomId: string, io: Server): Promise<void> {
     timers.delete(roomId);
     io.to(roomId).emit("room:closed", { reason: "Debate complete" });
     await store.deleteRoom(roomId);
+    await closeLiveKitRoom(roomId);
     logger.info({ roomId }, "Room closed after results");
   }, RESULTS_DISPLAY_MS);
 

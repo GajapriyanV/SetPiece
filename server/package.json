@@ -14,6 +14,7 @@
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "jose": "^6.0.11",
+    "livekit-server-sdk": "^2.15.0",
     "pino": "^9.6.0",
     "socket.io": "^4.8.1"
   },

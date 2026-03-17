@@ -7,6 +7,8 @@ import { socketAuth } from "./auth/socketAuth.js";
 import { registerHandlers } from "./handlers/registerHandlers.js";
 import { logger } from "./utils/logger.js";
 import * as roomStore from "./state/roomStore.js";
+import { livekitTokenRoute } from "./livekit/tokenRoute.js";
+import { livekitSyncRoute } from "./livekit/syncRoute.js";
 import type { ClientToServerEvents, ServerToClientEvents, SocketData } from "./types/events.js";
 
 const app = express();
@@ -17,6 +19,10 @@ app.use(express.json());
 app.get("/health", (_req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
+
+// LiveKit token + permission sync
+app.get("/api/livekit/token", livekitTokenRoute);
+app.get("/api/livekit/sync", livekitSyncRoute);
 
 // Room listing API
 app.get("/api/rooms", async (_req, res) => {

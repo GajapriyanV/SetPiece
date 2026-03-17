@@ -1,0 +1,17 @@
+export const TOPICS = [
+  { topic: "Greatest of All Time", sideALabel: "Messi", sideBLabel: "Ronaldo" },
+  { topic: "Future GOAT", sideALabel: "Haaland", sideBLabel: "Mbappé" },
+  { topic: "Best Premier League Season", sideALabel: "Arsenal 03/04", sideBLabel: "Man City 23/24" },
+  { topic: "Greatest Club of All Time", sideALabel: "Real Madrid", sideBLabel: "Barcelona" },
+  { topic: "Best Midfielder Right Now", sideALabel: "Bellingham", sideBLabel: "Pedri" },
+  { topic: "Better Manager", sideALabel: "Guardiola", sideBLabel: "Ancelotti" },
+  { topic: "Best Free Kick Taker Ever", sideALabel: "Juninho", sideBLabel: "Beckham" },
+  { topic: "Better League", sideALabel: "Premier League", sideBLabel: "La Liga" },
+  { topic: "Greatest World Cup Performance", sideALabel: "Brazil 1970", sideBLabel: "France 2018" },
+  { topic: "Better Striker", sideALabel: "Lewandowski", sideBLabel: "Suárez" },
+  { topic: "Best Defender of Their Era", sideALabel: "Maldini", sideBLabel: "Ramos" },
+  { topic: "More Entertaining Player", sideALabel: "Ronaldinho", sideBLabel: "Neymar" },
+  { topic: "Greatest Champions League Final", sideALabel: "Istanbul 2005", sideBLabel: "Moscow 2008" },
+  { topic: "Better Number 10", sideALabel: "Zidane", sideBLabel: "Maradona" },
+  { topic: "Best Young Talent", sideALabel: "Yamal", sideBLabel: "Endrick" },
+];

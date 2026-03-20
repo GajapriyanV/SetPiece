@@ -33,7 +33,7 @@ export default function TopNav() {
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     setUser(null);
-    router.refresh();
+    router.push("/");
   };
 
   return (

@@ -2,6 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/utils/supabase/client";
+import SignInModal from "@/components/auth/SignInModal";
+import type { User } from "@supabase/supabase-js";
 
 type DebateStatus = "live" | "soon" | "upcoming";
 
@@ -161,18 +165,21 @@ function DebateCard({ debate }: { debate: Debate }) {
   );
 }
 
-function MoreCard() {
+function MoreCard({ onClick }: { onClick: () => void }) {
   const [hovered, setHovered] = useState(false);
   return (
-    <Link
-      href="/rooms"
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onClick}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onClick(); }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
         background: hovered ? "#13131a" : "var(--card)",
         display: "flex", flexDirection: "column",
         alignItems: "center", justifyContent: "center",
-        padding: "40px 24px", textDecoration: "none",
+        padding: "40px 24px",
         transition: "background 0.25s", cursor: "pointer",
         border: `1px dashed ${hovered ? "var(--g)" : "var(--border2)"}`,
         gap: "16px",
@@ -196,12 +203,26 @@ function MoreCard() {
       }}>
         Browse all live debates
       </div>
-    </Link>
+    </div>
   );
 }
 
 export default function LiveDebatesGrid() {
   const ref = useRef<HTMLDivElement>(null);
+  const router = useRouter();
+  const supabase = createClient();
+  const [user, setUser] = useState<User | null>(null);
+  const [showSignIn, setShowSignIn] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setUser(data.user));
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+    return () => subscription.unsubscribe();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     const obs = new IntersectionObserver(
@@ -216,49 +237,61 @@ export default function LiveDebatesGrid() {
     return () => obs.disconnect();
   }, []);
 
+  const handleMoreRooms = () => {
+    if (user) {
+      router.push("/rooms");
+    } else {
+      setShowSignIn(true);
+    }
+  };
+
   return (
-    <div style={{ background: "var(--dark)", padding: "100px 0" }}>
-      <div ref={ref} id="debates" style={{ padding: "0 40px", maxWidth: "1400px", margin: "0 auto" }}>
+    <>
+      {showSignIn && <SignInModal onClose={() => setShowSignIn(false)} />}
 
-        {/* Section header */}
-        <div className="rv" style={{
-          display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: "40px",
-        }}>
-          <div>
-            <div className="sec-label">Right Now</div>
-            <h2 style={{
-              fontFamily: "var(--font-oswald, 'Oswald', sans-serif)",
-              fontSize: "clamp(36px, 4vw, 56px)", fontWeight: 700,
-              textTransform: "uppercase", letterSpacing: "-1px", lineHeight: 1,
-            }}>Live Debates</h2>
+      <div style={{ background: "var(--dark)", padding: "100px 0" }}>
+        <div ref={ref} id="debates" style={{ padding: "0 40px", maxWidth: "1400px", margin: "0 auto" }}>
+
+          {/* Section header */}
+          <div className="rv" style={{
+            display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: "40px",
+          }}>
+            <div>
+              <div className="sec-label">Right Now</div>
+              <h2 style={{
+                fontFamily: "var(--font-oswald, 'Oswald', sans-serif)",
+                fontSize: "clamp(36px, 4vw, 56px)", fontWeight: 700,
+                textTransform: "uppercase", letterSpacing: "-1px", lineHeight: 1,
+              }}>Live Debates</h2>
+            </div>
+            <Link href="/browse" style={{
+              fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+              fontSize: "11px", letterSpacing: "2px", textTransform: "uppercase",
+              color: "var(--dim)", textDecoration: "none",
+              display: "flex", alignItems: "center", gap: "6px",
+              paddingBottom: "4px", borderBottom: "1px solid var(--border2)",
+              transition: "color 0.2s",
+            }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = "var(--g)"; e.currentTarget.style.borderColor = "var(--g)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = "var(--dim)"; e.currentTarget.style.borderColor = "var(--border2)"; }}
+            >
+              View all debates →
+            </Link>
           </div>
-          <Link href="/browse" style={{
-            fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
-            fontSize: "11px", letterSpacing: "2px", textTransform: "uppercase",
-            color: "var(--dim)", textDecoration: "none",
-            display: "flex", alignItems: "center", gap: "6px",
-            paddingBottom: "4px", borderBottom: "1px solid var(--border2)",
-            transition: "color 0.2s",
-          }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = "var(--g)"; e.currentTarget.style.borderColor = "var(--g)"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = "var(--dim)"; e.currentTarget.style.borderColor = "var(--border2)"; }}
-          >
-            View all debates →
-          </Link>
-        </div>
 
-        {/* Grid */}
-        <div className="rv" style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(3, 1fr)",
-          gap: "1px",
-          background: "var(--border)",
-          border: "1px solid var(--border)",
-        }}>
-          {DEBATES.map((d) => <DebateCard key={d.id} debate={d} />)}
-          <MoreCard />
+          {/* Grid */}
+          <div className="rv" style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(3, 1fr)",
+            gap: "1px",
+            background: "var(--border)",
+            border: "1px solid var(--border)",
+          }}>
+            {DEBATES.map((d) => <DebateCard key={d.id} debate={d} />)}
+            <MoreCard onClick={handleMoreRooms} />
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }

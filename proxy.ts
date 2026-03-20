@@ -34,15 +34,26 @@ export async function proxy(request: NextRequest) {
   // Refresh the session — MUST be called for session cookies to stay alive
   const { data: { user } } = await supabase.auth.getUser();
 
-  // Protected route guard — redirect unauthenticated users to home
+  const pathname = request.nextUrl.pathname;
+
+  // Protected route guard
   const protectedPrefixes = ["/rooms", "/profile"];
-  const isProtected = protectedPrefixes.some((prefix) =>
-    request.nextUrl.pathname.startsWith(prefix)
-  );
-  if (isProtected && !user) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/";
-    return NextResponse.redirect(url);
+  const isProtected = protectedPrefixes.some((prefix) => pathname.startsWith(prefix));
+
+  if (isProtected) {
+    if (!user) {
+      // Unauthenticated — send to home
+      const url = request.nextUrl.clone();
+      url.pathname = "/";
+      return NextResponse.redirect(url);
+    }
+    // Authenticated but registration not finished — send to complete profile
+    if (user.user_metadata?.onboarding_complete !== true) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/register";
+      url.searchParams.set("complete", "1");
+      return NextResponse.redirect(url);
+    }
   }
 
   return supabaseResponse;

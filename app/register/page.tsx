@@ -7,7 +7,6 @@ import SearchableSelect from "@/components/ui/SearchableSelect";
 import { COUNTRIES } from "@/lib/data/countries";
 import { ALL_CLUBS, CLUB_NAMES } from "@/lib/data/clubs";
 
-// League subtitle map for club dropdown
 const CLUB_LEAGUE_MAP: Record<string, string> = Object.fromEntries(
   ALL_CLUBS.map((c) => [c.name, c.league])
 );
@@ -64,7 +63,6 @@ const STEP_TITLES = [
   { heading: "All Set",        sub: "Review your details"            },
 ];
 
-// Password strength requirements
 function getPasswordErrors(pw: string): string[] {
   const errs: string[] = [];
   if (pw.length < 8)            errs.push("At least 8 characters");
@@ -77,7 +75,7 @@ function getPasswordErrors(pw: string): string[] {
 export default function RegisterPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  // complete=1 → OAuth user who already has auth credentials, just needs profile
+  // complete=1 → user is already authenticated (OAuth or returning email user), just needs profile
   const isComplete = searchParams.get("complete") === "1";
 
   const supabase = createClient();
@@ -86,24 +84,34 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [passwordTouched, setPasswordTouched] = useState(false);
+  // Whether the current user already has a username (email/password users who passed step 1)
+  const [hasUsername, setHasUsername] = useState(false);
   const [form, setForm] = useState({
     username: "", email: "", password: "", confirm: "",
     name: "", country: "", club: "",
   });
 
-  // Pre-fill name from Google metadata when in complete mode
+  // In complete mode: pre-fill name from auth metadata, check if username already set
   useEffect(() => {
     if (!isComplete) return;
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) return;
       const meta = user.user_metadata ?? {};
+      const existingUsername = meta.username ?? "";
+      setHasUsername(!!existingUsername);
       setForm((prev) => ({
         ...prev,
         name: meta.full_name ?? meta.name ?? prev.name,
+        username: existingUsername || prev.username,
       }));
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isComplete]);
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    router.push("/");
+  };
 
   const set = (key: string) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm(prev => ({ ...prev, [key]: e.target.value }));
@@ -147,43 +155,41 @@ export default function RegisterPage() {
     if (error) setError(error.message);
   };
 
+  // Step 1: create auth credentials (email/password only)
   const handleSignUp = async () => {
     setError("");
-    if (!form.email || !form.password || !form.username) {
-      setError("Please fill in all fields");
-      return;
-    }
-    if (form.password !== form.confirm) {
-      setError("Passwords do not match");
-      return;
-    }
+    if (!form.username.trim()) { setError("Username is required"); return; }
+    if (!form.email.trim())    { setError("Email is required"); return; }
+    if (!form.password)        { setError("Password is required"); return; }
+    if (form.password !== form.confirm) { setError("Passwords do not match"); return; }
     const pwErrors = getPasswordErrors(form.password);
-    if (pwErrors.length > 0) {
-      setError(pwErrors[0]);
-      return;
-    }
+    if (pwErrors.length > 0) { setError(pwErrors[0]); return; }
+
     setLoading(true);
     const { error } = await supabase.auth.signUp({
       email: form.email,
       password: form.password,
-      options: {
-        data: { username: form.username },
-      },
+      options: { data: { username: form.username } },
     });
     setLoading(false);
-    if (error) {
-      setError(error.message);
-      return;
-    }
+    if (error) { setError(error.message); return; }
     setStep(2);
   };
 
+  // Step 2 → 3: validate profile fields
   const handleStep2Next = () => {
     setError("");
-    if (isComplete && !form.username.trim()) {
-      setError("Please choose a username");
+    // Username required if not already set from step 1 or OAuth metadata
+    if (!hasUsername && !form.username.trim()) {
+      setError("Username is required");
       return;
     }
+    // Name is always required
+    if (!form.name.trim()) {
+      setError("Full name is required");
+      return;
+    }
+    // If country/club entered, must be from the valid list
     if (form.country && !COUNTRIES.includes(form.country)) {
       setError("Please select a valid country from the list");
       return;
@@ -195,30 +201,54 @@ export default function RegisterPage() {
     setStep(3);
   };
 
+  // Final step: write profile row + mark onboarding complete in auth metadata
   const handleCreateAccount = async () => {
     setError("");
     setLoading(true);
+
     const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      const { error } = await supabase.from("profiles").upsert({
-        id: user.id,
-        username: form.username || user.user_metadata?.username || null,
-        name: form.name,
-        country: form.country,
-        club: form.club,
-      });
-      if (error) {
-        setLoading(false);
-        setError(error.message);
-        return;
-      }
+    if (!user) {
+      setError("Session lost. Please sign in again.");
+      setLoading(false);
+      return;
     }
+
+    const resolvedUsername = form.username.trim() || user.user_metadata?.username || null;
+
+    // Write profile row
+    const { error: profileError } = await supabase.from("profiles").upsert({
+      id: user.id,
+      username: resolvedUsername,
+      name: form.name,
+      country: form.country || null,
+      club: form.club || null,
+      registration_complete: true,
+    });
+    if (profileError) {
+      setError(profileError.message);
+      setLoading(false);
+      return;
+    }
+
+    // Mark onboarding complete in auth metadata — proxy reads this without a DB query
+    const { error: metaError } = await supabase.auth.updateUser({
+      data: { onboarding_complete: true, username: resolvedUsername },
+    });
+    if (metaError) {
+      // Non-fatal: profile is written. Log and continue.
+      console.error("[register] updateUser error:", metaError.message);
+    }
+
     setLoading(false);
     router.push("/");
   };
 
   const passwordErrors = passwordTouched ? getPasswordErrors(form.password) : [];
+  void passwordErrors; // used inline below
   const { heading, sub } = STEP_TITLES[step - 1];
+
+  // Show sign-out when user is already authenticated (step 2+, or complete mode)
+  const showSignOut = isComplete || step > 1;
 
   return (
     <div style={{
@@ -246,19 +276,35 @@ export default function RegisterPage() {
           }}>
             SET <span style={{ color: "var(--g)", fontWeight: 300, margin: "0 2px" }}>/</span> PIECE
           </div>
-          <div style={{
-            fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
-            fontSize: "9px", color: "var(--dim)", letterSpacing: "2px",
-            textTransform: "uppercase",
-          }}>
-            {isComplete ? "Complete Profile" : `Step ${step} of 3`}
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            {showSignOut && (
+              <button
+                onClick={handleSignOut}
+                style={{
+                  background: "none", border: "none", padding: 0,
+                  fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+                  fontSize: "9px", color: "var(--dim)", letterSpacing: "2px",
+                  textTransform: "uppercase", cursor: "pointer", transition: "color 0.2s",
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = "var(--text)"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = "var(--dim)"; }}
+              >
+                Sign Out
+              </button>
+            )}
+            <div style={{
+              fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+              fontSize: "9px", color: "var(--dim)", letterSpacing: "2px",
+              textTransform: "uppercase",
+            }}>
+              {isComplete ? "Complete Profile" : `Step ${step} of 3`}
+            </div>
           </div>
         </div>
 
         {/* Body */}
         <div style={{ padding: "16px 24px" }}>
 
-          {/* Heading */}
           <h2 style={{
             fontFamily: "var(--font-display, 'Big Shoulders Display', sans-serif)",
             fontSize: "36px", fontWeight: 900, textTransform: "uppercase",
@@ -277,10 +323,9 @@ export default function RegisterPage() {
 
           {error && <div style={errorStyle}>{error}</div>}
 
-          {/* ── Step 1 (email/password signup only) ── */}
+          {/* ── Step 1: credentials (email/password path only) ── */}
           {step === 1 && (
             <>
-              {/* OAuth */}
               <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "16px" }}>
                 {OAUTH_PROVIDERS.map((btn) => (
                   <button
@@ -310,7 +355,6 @@ export default function RegisterPage() {
                 ))}
               </div>
 
-              {/* OR divider */}
               <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "16px" }}>
                 <div style={{ flex: 1, height: "1px", background: "var(--border)" }} />
                 <span style={{ fontFamily: "var(--font-mono, 'Roboto Mono', monospace)", fontSize: "10px", color: "var(--dim)", letterSpacing: "3px" }}>OR</span>
@@ -318,24 +362,23 @@ export default function RegisterPage() {
               </div>
 
               <div style={{ marginBottom: "10px" }}>
-                <label style={labelStyle}>Username</label>
+                <label style={labelStyle}>Username <span style={{ color: "var(--red)" }}>*</span></label>
                 <input type="text" placeholder="your_handle" value={form.username}
                   onChange={set("username")} onFocus={() => setFocused("username")} onBlur={() => setFocused("")}
                   style={inputStyle("username")} />
               </div>
               <div style={{ marginBottom: "10px" }}>
-                <label style={labelStyle}>Email</label>
+                <label style={labelStyle}>Email <span style={{ color: "var(--red)" }}>*</span></label>
                 <input type="email" placeholder="you@example.com" value={form.email}
                   onChange={set("email")} onFocus={() => setFocused("email")} onBlur={() => setFocused("")}
                   style={inputStyle("email")} />
               </div>
               <div style={{ marginBottom: "6px" }}>
-                <label style={labelStyle}>Password</label>
+                <label style={labelStyle}>Password <span style={{ color: "var(--red)" }}>*</span></label>
                 <input type="password" placeholder="········" value={form.password}
                   onChange={(e) => { set("password")(e); setPasswordTouched(true); }}
                   onFocus={() => setFocused("password")} onBlur={() => setFocused("")}
                   style={{ ...inputStyle("password"), letterSpacing: "2px" }} />
-                {/* Inline password hints */}
                 {passwordTouched && form.password.length > 0 && (
                   <div style={{ marginTop: "6px", display: "flex", flexDirection: "column", gap: "3px" }}>
                     {[
@@ -348,18 +391,16 @@ export default function RegisterPage() {
                         display: "flex", alignItems: "center", gap: "6px",
                         fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
                         fontSize: "9px", letterSpacing: "1px",
-                        color: rule ? "var(--g)" : "var(--dim)",
-                        transition: "color 0.2s",
+                        color: rule ? "var(--g)" : "var(--dim)", transition: "color 0.2s",
                       }}>
-                        <span>{rule ? "✓" : "·"}</span>
-                        <span>{label}</span>
+                        <span>{rule ? "✓" : "·"}</span><span>{label}</span>
                       </div>
                     ))}
                   </div>
                 )}
               </div>
               <div style={{ marginBottom: "16px", marginTop: "10px" }}>
-                <label style={labelStyle}>Confirm Password</label>
+                <label style={labelStyle}>Confirm Password <span style={{ color: "var(--red)" }}>*</span></label>
                 <input type="password" placeholder="········" value={form.confirm}
                   onChange={set("confirm")} onFocus={() => setFocused("confirm")} onBlur={() => setFocused("")}
                   style={{ ...inputStyle("confirm"), letterSpacing: "2px" }} />
@@ -377,13 +418,13 @@ export default function RegisterPage() {
             </>
           )}
 
-          {/* ── Step 2 (profile details) ── */}
+          {/* ── Step 2: profile details ── */}
           {step === 2 && (
             <>
-              {/* Username is required in complete mode (OAuth users have no username yet) */}
-              {isComplete && (
+              {/* Show username field only when it hasn't been set already */}
+              {!hasUsername && (
                 <div style={{ marginBottom: "10px" }}>
-                  <label style={labelStyle}>Username</label>
+                  <label style={labelStyle}>Username <span style={{ color: "var(--red)" }}>*</span></label>
                   <input type="text" placeholder="your_handle" value={form.username}
                     onChange={set("username")} onFocus={() => setFocused("username")} onBlur={() => setFocused("")}
                     style={inputStyle("username")} />
@@ -391,7 +432,7 @@ export default function RegisterPage() {
               )}
 
               <div style={{ marginBottom: "10px" }}>
-                <label style={labelStyle}>Full Name</label>
+                <label style={labelStyle}>Full Name <span style={{ color: "var(--red)" }}>*</span></label>
                 <input type="text" placeholder="Your name" value={form.name}
                   onChange={set("name")} onFocus={() => setFocused("name")} onBlur={() => setFocused("")}
                   style={inputStyle("name")} />
@@ -427,7 +468,6 @@ export default function RegisterPage() {
               </div>
 
               <div style={{ display: "flex", gap: "12px" }}>
-                {/* Hide back button in complete mode — can't go back to step 1 (already authed) */}
                 {!isComplete && (
                   <button style={backBtn}
                     onClick={() => setStep(1)}
@@ -445,7 +485,7 @@ export default function RegisterPage() {
             </>
           )}
 
-          {/* ── Step 3 (review + submit) ── */}
+          {/* ── Step 3: review + submit ── */}
           {step === 3 && (
             <>
               <div style={{

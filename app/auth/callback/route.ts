@@ -4,7 +4,6 @@ import { createClient } from "@/utils/supabase/server";
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  // `next` lets callers specify a post-auth destination (e.g. /rooms)
   const next = searchParams.get("next") ?? "/";
 
   if (!code) {
@@ -24,29 +23,26 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${origin}/?error=no_user`);
   }
 
-  // Check whether a profile row with a username already exists
-  const { data: profile } = await supabase
+  // Use the explicit onboarding flag — never infer from partial data
+  if (user.user_metadata?.onboarding_complete === true) {
+    return NextResponse.redirect(`${origin}${next}`);
+  }
+
+  // Seed a minimal profile row if one doesn't exist yet
+  const { data: existing } = await supabase
     .from("profiles")
-    .select("id, username")
+    .select("id")
     .eq("id", user.id)
     .maybeSingle();
 
-  if (!profile) {
-    // Seed a minimal profile row from whatever Google gave us
+  if (!existing) {
     const meta = user.user_metadata ?? {};
     await supabase.from("profiles").insert({
       id: user.id,
       name: meta.full_name ?? meta.name ?? null,
     });
-    // Send them to the profile-completion step
-    return NextResponse.redirect(`${origin}/register?complete=1`);
   }
 
-  if (!profile.username) {
-    // Row exists but no username set yet — still needs completion
-    return NextResponse.redirect(`${origin}/register?complete=1`);
-  }
-
-  // Fully set up — send them where they were going
-  return NextResponse.redirect(`${origin}${next}`);
+  // Registration incomplete — complete the profile
+  return NextResponse.redirect(`${origin}/register?complete=1`);
 }

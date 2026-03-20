@@ -13,22 +13,32 @@ export default function TopNav() {
   const supabase = createClient();
   const [showSignIn, setShowSignIn] = useState(false);
   const [user, setUser] = useState<User | null>(null);
+  const [profileUsername, setProfileUsername] = useState<string | null>(null);
+
+  const fetchProfileUsername = async (userId: string) => {
+    const { data } = await supabase.from("profiles").select("username").eq("id", userId).single();
+    if (data?.username) setProfileUsername(data.username);
+  };
 
   useEffect(() => {
     const fetchUser = async () => {
       const { data } = await supabase.auth.getUser();
       setUser(data.user);
+      if (data.user) fetchProfileUsername(data.user.id);
     };
     fetchUser();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event: string, session: { user: User | null } | null) => {
         setUser(session?.user ?? null);
+        if (session?.user) fetchProfileUsername(session.user.id);
+        else setProfileUsername(null);
       }
     );
 
     return () => subscription.unsubscribe();
-  }, [supabase.auth]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -142,7 +152,7 @@ export default function TopNav() {
               onMouseEnter={(e) => (e.currentTarget.style.color = "var(--g)")}
               onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text)")}
             >
-              {user.user_metadata?.username || user.email?.split("@")[0] || "User"}
+              {profileUsername || user.user_metadata?.username || user.email?.split("@")[0] || "User"}
             </Link>
             <button
               onClick={handleSignOut}

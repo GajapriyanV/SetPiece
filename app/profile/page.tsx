@@ -33,6 +33,7 @@ interface UserProfile {
   totalDebaters: number;
   debates: Debate[];
   username_changed_at: string | null;
+  avatar_url: string | null;
 }
 
 // ── Ticker ────────────────────────────────────────────────────────────────────
@@ -241,7 +242,7 @@ export default function ProfilePage() {
     <div style={{ paddingTop: "60px", paddingBottom: "48px", minHeight: "100vh", background: "var(--dark)" }}>
       {showEdit && profile && (
         <EditProfileModal
-          initial={{ name: profile.name, username: profile.username, country: profile.country, club: profile.club, username_changed_at: profile.username_changed_at }}
+          initial={{ name: profile.name, username: profile.username, country: profile.country, club: profile.club, username_changed_at: profile.username_changed_at, avatar_url: profile.avatar_url }}
           onClose={() => setShowEdit(false)}
           onSaved={(updated) => {
             setProfile((p) => p ? { ...p, ...updated } : p);
@@ -309,7 +310,7 @@ export default function ProfilePage() {
                     width: "80px",
                     height: "80px",
                     borderRadius: "50%",
-                    background: "linear-gradient(135deg, var(--g), #00c06a)",
+                    background: profile.avatar_url ? "transparent" : "linear-gradient(135deg, var(--g), #00c06a)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
@@ -319,8 +320,14 @@ export default function ProfilePage() {
                     color: "#000",
                     flexShrink: 0,
                     boxShadow: "0 0 0 2px rgba(0,255,135,0.25), 0 0 32px rgba(0,255,135,0.12)",
+                    overflow: "hidden",
                   }}>
-                    {(profile.name || profile.username)[0].toUpperCase()}
+                    {profile.avatar_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={profile.avatar_url} alt="Profile" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    ) : (
+                      (profile.name || profile.username)[0].toUpperCase()
+                    )}
                   </div>
 
                   {/* Name block */}
@@ -577,7 +584,9 @@ export default function ProfilePage() {
                 No debates yet.{" "}
               <Link
                 href="/rooms"
-                style={{ color: "var(--g)", textDecoration: "none" }}
+                style={{ color: "var(--text)", textDecoration: "none", transition: "color 0.2s" }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = "var(--g)")}
+                onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text)")}
               >
                 Enter the pitch.
               </Link>

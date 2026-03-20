@@ -24,14 +24,16 @@ interface EditProfileModalProps {
     country: string | null;
     club: string | null;
     username_changed_at: string | null;
+    avatar_url: string | null;
   };
   onClose: () => void;
-  onSaved: (updated: { name: string; username: string; country: string | null; club: string | null; username_changed_at: string | null }) => void;
+  onSaved: (updated: { name: string; username: string; country: string | null; club: string | null; username_changed_at: string | null; avatar_url: string | null }) => void;
 }
 
 export default function EditProfileModal({ initial, onClose, onSaved }: EditProfileModalProps) {
   const supabase = createClient();
   const overlayRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [form, setForm] = useState({
     name: initial.name ?? "",
@@ -44,6 +46,11 @@ export default function EditProfileModal({ initial, onClose, onSaved }: EditProf
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [usernameError, setUsernameError] = useState("");
+
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(initial.avatar_url);
+  const [avatarError, setAvatarError] = useState("");
+  const [avatarHovered, setAvatarHovered] = useState(false);
 
   const COOLDOWN_MS = 14 * 24 * 60 * 60 * 1000; // 2 weeks
 
@@ -85,6 +92,22 @@ export default function EditProfileModal({ initial, onClose, onSaved }: EditProf
   const set = (field: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setForm((f) => ({ ...f, [field]: e.target.value }));
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setAvatarError("File must be an image");
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setAvatarError("Image must be under 2MB");
+      return;
+    }
+    setAvatarError("");
+    setAvatarFile(file);
+    setAvatarPreview(URL.createObjectURL(file));
+  };
+
   const handleSave = async () => {
     setError("");
     if (!form.name.trim() || !form.username.trim()) {
@@ -115,6 +138,8 @@ export default function EditProfileModal({ initial, onClose, onSaved }: EditProf
       }
     }
 
+    if (avatarError) return;
+
     setLoading(true);
 
     const { data: { user } } = await supabase.auth.getUser();
@@ -122,6 +147,22 @@ export default function EditProfileModal({ initial, onClose, onSaved }: EditProf
       setError("Not authenticated");
       setLoading(false);
       return;
+    }
+
+    // Upload avatar if a new file was selected
+    let newAvatarUrl: string | null = initial.avatar_url;
+    if (avatarFile) {
+      const ext = avatarFile.name.split(".").pop() ?? "jpg";
+      const path = `${user.id}/${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(path, avatarFile, { upsert: true });
+      if (uploadError) {
+        setError("Photo upload failed: " + uploadError.message);
+        setLoading(false);
+        return;
+      }
+      newAvatarUrl = supabase.storage.from("avatars").getPublicUrl(path).data.publicUrl;
     }
 
     const now = new Date().toISOString();
@@ -132,6 +173,7 @@ export default function EditProfileModal({ initial, onClose, onSaved }: EditProf
       club: form.club || null,
       updated_at: now,
       ...(usernameChanged ? { username_changed_at: now } : {}),
+      ...(newAvatarUrl !== initial.avatar_url ? { avatar_url: newAvatarUrl } : {}),
     }).eq("id", user.id);
 
     setLoading(false);
@@ -149,6 +191,7 @@ export default function EditProfileModal({ initial, onClose, onSaved }: EditProf
         country: form.country || null,
         club: form.club || null,
         username_changed_at: usernameChanged ? now : initial.username_changed_at,
+        avatar_url: newAvatarUrl,
       });
     }, 600);
   };
@@ -244,6 +287,116 @@ export default function EditProfileModal({ initial, onClose, onSaved }: EditProf
 
         {/* Form */}
         <div style={{ padding: "28px 24px 24px" }}>
+
+          {/* Avatar */}
+          <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "24px" }}>
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              onMouseEnter={() => setAvatarHovered(true)}
+              onMouseLeave={() => setAvatarHovered(false)}
+              style={{
+                width: "64px",
+                height: "64px",
+                borderRadius: "50%",
+                background: avatarPreview ? "transparent" : "linear-gradient(135deg, var(--g), #00c06a)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontFamily: "var(--font-display, 'Big Shoulders Display', sans-serif)",
+                fontSize: "26px",
+                fontWeight: 900,
+                color: "#000",
+                flexShrink: 0,
+                overflow: "hidden",
+                cursor: "pointer",
+                position: "relative",
+                boxShadow: avatarHovered ? "0 0 0 2px var(--g)" : "0 0 0 2px rgba(0,255,135,0.25)",
+                transition: "box-shadow 0.2s",
+              }}
+            >
+              {avatarPreview ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={avatarPreview} alt="Avatar preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              ) : (
+                (form.name || form.username || "?")[0].toUpperCase()
+              )}
+              {/* Hover overlay */}
+              <div style={{
+                position: "absolute",
+                inset: 0,
+                background: "rgba(0,0,0,0.55)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                opacity: avatarHovered ? 1 : 0,
+                transition: "opacity 0.2s",
+              }}>
+                <span style={{ fontSize: "18px", lineHeight: 1 }}>📷</span>
+              </div>
+            </div>
+            <div>
+              <div style={{
+                fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+                fontSize: "9px",
+                color: "var(--dim)",
+                letterSpacing: "2px",
+                textTransform: "uppercase",
+                marginBottom: "4px",
+              }}>
+                Profile Photo
+              </div>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                style={{
+                  background: "transparent",
+                  border: "1px solid var(--border2)",
+                  borderRadius: "2px",
+                  color: "var(--dim)",
+                  fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+                  fontSize: "9px",
+                  letterSpacing: "2px",
+                  textTransform: "uppercase",
+                  padding: "6px 12px",
+                  cursor: "pointer",
+                  transition: "border-color 0.2s, color 0.2s",
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--g)"; e.currentTarget.style.color = "var(--g)"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--border2)"; e.currentTarget.style.color = "var(--dim)"; }}
+              >
+                Choose Image
+              </button>
+              <div style={{
+                fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+                fontSize: "8px",
+                color: "var(--dim)",
+                letterSpacing: "1px",
+                marginTop: "4px",
+                opacity: 0.6,
+              }}>
+                JPG, PNG, WEBP · Max 2MB
+              </div>
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleFileChange}
+              style={{ display: "none" }}
+            />
+          </div>
+          {avatarError && (
+            <div style={{
+              fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+              fontSize: "9px",
+              color: "var(--red)",
+              letterSpacing: "1px",
+              marginBottom: "14px",
+              marginTop: "-16px",
+            }}>
+              {avatarError}
+            </div>
+          )}
 
           {/* Display Name */}
           <div style={{ marginBottom: "14px" }}>

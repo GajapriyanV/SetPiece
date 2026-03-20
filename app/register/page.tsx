@@ -1,22 +1,15 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
+import SearchableSelect from "@/components/ui/SearchableSelect";
+import { COUNTRIES } from "@/lib/data/countries";
+import { ALL_CLUBS, CLUB_NAMES } from "@/lib/data/clubs";
 
-const CLUBS = [
-  "Arsenal", "Aston Villa", "Atletico Madrid", "Bayern Munich", "Barcelona",
-  "Borussia Dortmund", "Chelsea", "Everton", "Inter Milan", "Juventus",
-  "Liverpool", "Manchester City", "Manchester United", "Milan", "Napoli",
-  "Newcastle United", "Paris Saint-Germain", "Real Madrid", "Roma",
-  "Tottenham Hotspur", "West Ham United",
-];
-
-const COUNTRIES = [
-  "Argentina", "Belgium", "Brazil", "Colombia", "Croatia", "England",
-  "France", "Germany", "Italy", "Netherlands", "Norway", "Portugal",
-  "Senegal", "Spain", "United States", "Uruguay", "Other",
-];
+const CLUB_LEAGUE_MAP: Record<string, string> = Object.fromEntries(
+  ALL_CLUBS.map((c) => [c.name, c.league])
+);
 
 const OAUTH_PROVIDERS: { label: string; provider: "google" | "twitter" | "discord"; icon: React.ReactNode }[] = [
   {
@@ -70,20 +63,61 @@ const STEP_TITLES = [
   { heading: "All Set",        sub: "Review your details"            },
 ];
 
+function getPasswordErrors(pw: string): string[] {
+  const errs: string[] = [];
+  if (pw.length < 8)            errs.push("At least 8 characters");
+  if (!/[A-Z]/.test(pw))        errs.push("At least 1 uppercase letter");
+  if (!/[a-z]/.test(pw))        errs.push("At least 1 lowercase letter");
+  if (!/[^A-Za-z0-9]/.test(pw)) errs.push("At least 1 special character");
+  return errs;
+}
+
 export default function RegisterPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  // complete=1 → user is already authenticated (OAuth or returning email user), just needs profile
+  const isComplete = searchParams.get("complete") === "1";
+
   const supabase = createClient();
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(isComplete ? 2 : 1);
   const [focused, setFocused] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [passwordTouched, setPasswordTouched] = useState(false);
+  // Whether the current user already has a username (email/password users who passed step 1)
+  const [hasUsername, setHasUsername] = useState(false);
   const [form, setForm] = useState({
     username: "", email: "", password: "", confirm: "",
     name: "", country: "", club: "",
   });
 
-  const set = (key: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+  // In complete mode: pre-fill name from auth metadata, check if username already set
+  useEffect(() => {
+    if (!isComplete) return;
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return;
+      const meta = user.user_metadata ?? {};
+      const existingUsername = meta.username ?? "";
+      setHasUsername(!!existingUsername);
+      setForm((prev) => ({
+        ...prev,
+        name: meta.full_name ?? meta.name ?? prev.name,
+        username: existingUsername || prev.username,
+      }));
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isComplete]);
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    router.push("/");
+  };
+
+  const set = (key: string) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm(prev => ({ ...prev, [key]: e.target.value }));
+
+  const setField = (key: string) => (value: string) =>
+    setForm(prev => ({ ...prev, [key]: value }));
 
   const inputStyle = (key: string): React.CSSProperties => ({
     width: "100%", padding: "10px 14px",
@@ -116,64 +150,105 @@ export default function RegisterPage() {
     setError("");
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
-      options: { redirectTo: `${window.location.origin}/` },
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
     });
     if (error) setError(error.message);
   };
 
+  // Step 1: create auth credentials (email/password only)
   const handleSignUp = async () => {
     setError("");
-    if (!form.email || !form.password || !form.username) {
-      setError("Please fill in all fields");
-      return;
-    }
-    if (form.password !== form.confirm) {
-      setError("Passwords do not match");
-      return;
-    }
-    if (form.password.length < 6) {
-      setError("Password must be at least 6 characters");
-      return;
-    }
+    if (!form.username.trim()) { setError("Username is required"); return; }
+    if (!form.email.trim())    { setError("Email is required"); return; }
+    if (!form.password)        { setError("Password is required"); return; }
+    if (form.password !== form.confirm) { setError("Passwords do not match"); return; }
+    const pwErrors = getPasswordErrors(form.password);
+    if (pwErrors.length > 0) { setError(pwErrors[0]); return; }
+
     setLoading(true);
     const { error } = await supabase.auth.signUp({
       email: form.email,
       password: form.password,
-      options: {
-        data: { username: form.username },
-      },
+      options: { data: { username: form.username } },
     });
     setLoading(false);
-    if (error) {
-      setError(error.message);
-      return;
-    }
+    if (error) { setError(error.message); return; }
     setStep(2);
   };
 
+  // Step 2 → 3: validate profile fields
+  const handleStep2Next = () => {
+    setError("");
+    // Username required if not already set from step 1 or OAuth metadata
+    if (!hasUsername && !form.username.trim()) {
+      setError("Username is required");
+      return;
+    }
+    // Name is always required
+    if (!form.name.trim()) {
+      setError("Full name is required");
+      return;
+    }
+    // If country/club entered, must be from the valid list
+    if (form.country && !COUNTRIES.includes(form.country)) {
+      setError("Please select a valid country from the list");
+      return;
+    }
+    if (form.club && !CLUB_NAMES.includes(form.club)) {
+      setError("Please select a valid club from the list");
+      return;
+    }
+    setStep(3);
+  };
+
+  // Final step: write profile row + mark onboarding complete in auth metadata
   const handleCreateAccount = async () => {
     setError("");
     setLoading(true);
+
     const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      const { error } = await supabase.from("profiles").upsert({
-        id: user.id,
-        username: form.username,
-        name: form.name,
-        country: form.country,
-        club: form.club,
-      });
-      if (error) {
-        setLoading(false);
-        setError(error.message);
-        return;
-      }
+    if (!user) {
+      setError("Session lost. Please sign in again.");
+      setLoading(false);
+      return;
     }
+
+    const resolvedUsername = form.username.trim() || user.user_metadata?.username || null;
+
+    // Write profile row
+    const { error: profileError } = await supabase.from("profiles").upsert({
+      id: user.id,
+      username: resolvedUsername,
+      name: form.name,
+      country: form.country || null,
+      club: form.club || null,
+      registration_complete: true,
+    });
+    if (profileError) {
+      setError(profileError.message);
+      setLoading(false);
+      return;
+    }
+
+    // Mark onboarding complete in auth metadata — proxy reads this without a DB query
+    const { error: metaError } = await supabase.auth.updateUser({
+      data: { onboarding_complete: true, username: resolvedUsername },
+    });
+    if (metaError) {
+      // Non-fatal: profile is written. Log and continue.
+      console.error("[register] updateUser error:", metaError.message);
+    }
+
     setLoading(false);
     router.push("/");
   };
 
+  const passwordErrors = passwordTouched ? getPasswordErrors(form.password) : [];
+  void passwordErrors; // used inline below
   const { heading, sub } = STEP_TITLES[step - 1];
+
+  // Show sign-out when user is already authenticated (step 2+, or complete mode)
+  const showSignOut = isComplete || step > 1;
 
   return (
     <div style={{
@@ -201,19 +276,35 @@ export default function RegisterPage() {
           }}>
             SET <span style={{ color: "var(--g)", fontWeight: 300, margin: "0 2px" }}>/</span> PIECE
           </div>
-          <div style={{
-            fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
-            fontSize: "9px", color: "var(--dim)", letterSpacing: "2px",
-            textTransform: "uppercase",
-          }}>
-            Step {step} of 3
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            {showSignOut && (
+              <button
+                onClick={handleSignOut}
+                style={{
+                  background: "none", border: "none", padding: 0,
+                  fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+                  fontSize: "9px", color: "var(--dim)", letterSpacing: "2px",
+                  textTransform: "uppercase", cursor: "pointer", transition: "color 0.2s",
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = "var(--text)"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = "var(--dim)"; }}
+              >
+                Sign Out
+              </button>
+            )}
+            <div style={{
+              fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+              fontSize: "9px", color: "var(--dim)", letterSpacing: "2px",
+              textTransform: "uppercase",
+            }}>
+              {isComplete ? "Complete Profile" : `Step ${step} of 3`}
+            </div>
           </div>
         </div>
 
         {/* Body */}
         <div style={{ padding: "16px 24px" }}>
 
-          {/* Heading */}
           <h2 style={{
             fontFamily: "var(--font-display, 'Big Shoulders Display', sans-serif)",
             fontSize: "36px", fontWeight: 900, textTransform: "uppercase",
@@ -232,10 +323,9 @@ export default function RegisterPage() {
 
           {error && <div style={errorStyle}>{error}</div>}
 
-          {/* ── Step 1 ── */}
+          {/* ── Step 1: credentials (email/password path only) ── */}
           {step === 1 && (
             <>
-              {/* OAuth */}
               <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "16px" }}>
                 {OAUTH_PROVIDERS.map((btn) => (
                   <button
@@ -265,7 +355,6 @@ export default function RegisterPage() {
                 ))}
               </div>
 
-              {/* OR divider */}
               <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "16px" }}>
                 <div style={{ flex: 1, height: "1px", background: "var(--border)" }} />
                 <span style={{ fontFamily: "var(--font-mono, 'Roboto Mono', monospace)", fontSize: "10px", color: "var(--dim)", letterSpacing: "3px" }}>OR</span>
@@ -273,25 +362,45 @@ export default function RegisterPage() {
               </div>
 
               <div style={{ marginBottom: "10px" }}>
-                <label style={labelStyle}>Username</label>
+                <label style={labelStyle}>Username <span style={{ color: "var(--red)" }}>*</span></label>
                 <input type="text" placeholder="your_handle" value={form.username}
                   onChange={set("username")} onFocus={() => setFocused("username")} onBlur={() => setFocused("")}
                   style={inputStyle("username")} />
               </div>
               <div style={{ marginBottom: "10px" }}>
-                <label style={labelStyle}>Email</label>
+                <label style={labelStyle}>Email <span style={{ color: "var(--red)" }}>*</span></label>
                 <input type="email" placeholder="you@example.com" value={form.email}
                   onChange={set("email")} onFocus={() => setFocused("email")} onBlur={() => setFocused("")}
                   style={inputStyle("email")} />
               </div>
-              <div style={{ marginBottom: "10px" }}>
-                <label style={labelStyle}>Password</label>
+              <div style={{ marginBottom: "6px" }}>
+                <label style={labelStyle}>Password <span style={{ color: "var(--red)" }}>*</span></label>
                 <input type="password" placeholder="········" value={form.password}
-                  onChange={set("password")} onFocus={() => setFocused("password")} onBlur={() => setFocused("")}
+                  onChange={(e) => { set("password")(e); setPasswordTouched(true); }}
+                  onFocus={() => setFocused("password")} onBlur={() => setFocused("")}
                   style={{ ...inputStyle("password"), letterSpacing: "2px" }} />
+                {passwordTouched && form.password.length > 0 && (
+                  <div style={{ marginTop: "6px", display: "flex", flexDirection: "column", gap: "3px" }}>
+                    {[
+                      { rule: form.password.length >= 8,            label: "8+ characters" },
+                      { rule: /[A-Z]/.test(form.password),          label: "Uppercase letter" },
+                      { rule: /[a-z]/.test(form.password),          label: "Lowercase letter" },
+                      { rule: /[^A-Za-z0-9]/.test(form.password),   label: "Special character" },
+                    ].map(({ rule, label }) => (
+                      <div key={label} style={{
+                        display: "flex", alignItems: "center", gap: "6px",
+                        fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+                        fontSize: "9px", letterSpacing: "1px",
+                        color: rule ? "var(--g)" : "var(--dim)", transition: "color 0.2s",
+                      }}>
+                        <span>{rule ? "✓" : "·"}</span><span>{label}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-              <div style={{ marginBottom: "16px" }}>
-                <label style={labelStyle}>Confirm Password</label>
+              <div style={{ marginBottom: "16px", marginTop: "10px" }}>
+                <label style={labelStyle}>Confirm Password <span style={{ color: "var(--red)" }}>*</span></label>
                 <input type="password" placeholder="········" value={form.confirm}
                   onChange={set("confirm")} onFocus={() => setFocused("confirm")} onBlur={() => setFocused("")}
                   style={{ ...inputStyle("confirm"), letterSpacing: "2px" }} />
@@ -309,42 +418,66 @@ export default function RegisterPage() {
             </>
           )}
 
-          {/* ── Step 2 ── */}
+          {/* ── Step 2: profile details ── */}
           {step === 2 && (
             <>
+              {/* Show username field only when it hasn't been set already */}
+              {!hasUsername && (
+                <div style={{ marginBottom: "10px" }}>
+                  <label style={labelStyle}>Username <span style={{ color: "var(--red)" }}>*</span></label>
+                  <input type="text" placeholder="your_handle" value={form.username}
+                    onChange={set("username")} onFocus={() => setFocused("username")} onBlur={() => setFocused("")}
+                    style={inputStyle("username")} />
+                </div>
+              )}
+
               <div style={{ marginBottom: "10px" }}>
-                <label style={labelStyle}>Full Name</label>
+                <label style={labelStyle}>Full Name <span style={{ color: "var(--red)" }}>*</span></label>
                 <input type="text" placeholder="Your name" value={form.name}
                   onChange={set("name")} onFocus={() => setFocused("name")} onBlur={() => setFocused("")}
                   style={inputStyle("name")} />
               </div>
+
               <div style={{ marginBottom: "10px" }}>
-                <label style={labelStyle}>Country</label>
-                <select value={form.country} onChange={set("country")}
-                  onFocus={() => setFocused("country")} onBlur={() => setFocused("")}
-                  style={{ ...inputStyle("country"), appearance: "none" as const }}>
-                  <option value="" disabled>Select country</option>
-                  {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
+                <SearchableSelect
+                  label="Country"
+                  placeholder="Search countries..."
+                  options={COUNTRIES}
+                  value={form.country}
+                  onChange={setField("country")}
+                  fieldKey="country"
+                  focused={focused}
+                  onFocus={setFocused}
+                  onBlur={() => setFocused("")}
+                />
               </div>
+
               <div style={{ marginBottom: "16px" }}>
-                <label style={labelStyle}>Favourite Club</label>
-                <select value={form.club} onChange={set("club")}
-                  onFocus={() => setFocused("club")} onBlur={() => setFocused("")}
-                  style={{ ...inputStyle("club"), appearance: "none" as const }}>
-                  <option value="" disabled>Select club</option>
-                  {CLUBS.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
+                <SearchableSelect
+                  label="Favourite Club"
+                  placeholder="Search clubs..."
+                  options={CLUB_NAMES}
+                  value={form.club}
+                  onChange={setField("club")}
+                  fieldKey="club"
+                  focused={focused}
+                  onFocus={setFocused}
+                  onBlur={() => setFocused("")}
+                  subtitleMap={CLUB_LEAGUE_MAP}
+                />
               </div>
 
               <div style={{ display: "flex", gap: "12px" }}>
-                <button style={backBtn}
-                  onClick={() => setStep(1)}
-                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--dim)"; e.currentTarget.style.color = "var(--text)"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--border2)"; e.currentTarget.style.color = "var(--dim)"; }}
-                >← Back</button>
-                <button style={nextBtn}
-                  onClick={() => setStep(3)}
+                {!isComplete && (
+                  <button style={backBtn}
+                    onClick={() => setStep(1)}
+                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--dim)"; e.currentTarget.style.color = "var(--text)"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--border2)"; e.currentTarget.style.color = "var(--dim)"; }}
+                  >← Back</button>
+                )}
+                <button
+                  style={{ ...nextBtn, flex: isComplete ? "unset" : 2, width: isComplete ? "100%" : undefined }}
+                  onClick={handleStep2Next}
                   onMouseEnter={(e) => { e.currentTarget.style.background = "var(--g2)"; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = "var(--g)"; }}
                 >Continue →</button>
@@ -352,7 +485,7 @@ export default function RegisterPage() {
             </>
           )}
 
-          {/* ── Step 3 ── */}
+          {/* ── Step 3: review + submit ── */}
           {step === 3 && (
             <>
               <div style={{
@@ -361,7 +494,7 @@ export default function RegisterPage() {
               }}>
                 {[
                   { label: "Username",  value: form.username || "—" },
-                  { label: "Email",     value: form.email    || "—" },
+                  ...(!isComplete ? [{ label: "Email", value: form.email || "—" }] : []),
                   { label: "Full Name", value: form.name     || "—" },
                   { label: "Country",   value: form.country  || "—" },
                   { label: "Club",      value: form.club     || "—" },
@@ -397,7 +530,7 @@ export default function RegisterPage() {
                   onMouseEnter={(e) => { if (!loading) e.currentTarget.style.background = "var(--g2)"; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = "var(--g)"; }}
                   style={{ ...nextBtn, opacity: loading ? 0.6 : 1 }}
-                >{loading ? "Creating..." : "Create Account →"}</button>
+                >{loading ? "Saving..." : "Create Account →"}</button>
               </div>
             </>
           )}
@@ -405,7 +538,7 @@ export default function RegisterPage() {
 
         {/* Progress bar */}
         <div style={{ display: "flex", gap: "2px", padding: "10px 24px", borderTop: "1px solid var(--border)" }}>
-          {[1, 2, 3].map((s) => (
+          {(isComplete ? [2, 3] : [1, 2, 3]).map((s) => (
             <div key={s} style={{
               flex: 1, height: "3px", borderRadius: "2px",
               background: s <= step ? "var(--g)" : "var(--border2)",

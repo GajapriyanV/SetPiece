@@ -93,7 +93,7 @@ export default function SignInModal({ onClose, onRegister }: SignInModalProps) {
     setError("");
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
-      options: { redirectTo: `${window.location.origin}/` },
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
     });
     if (error) setError(error.message);
   };

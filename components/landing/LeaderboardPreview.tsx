@@ -1,15 +1,32 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 
-const PLAYERS = [
-  { rank: 1, initial: "T", color: "#f59e0b", name: "TacticalGenius_", sub: "12W · 2L this week", w: 12, l: 2, rating: 2341 },
-  { rank: 2, initial: "F", color: "#3b82f6", name: "FootballIQ99", sub: "9W · 1L this week", w: 9, l: 1, rating: 2187 },
-  { rank: 3, initial: "U", color: "#ef4444", name: "UltrasFCB", sub: "8W · 3L this week", w: 8, l: 3, rating: 2054 },
-  { rank: 4, initial: "X", color: "#8b5cf6", name: "xGWizard", sub: "7W · 2L this week", w: 7, l: 2, rating: 1987 },
-  { rank: 5, initial: "P", color: "#22c55e", name: "PressureMerkel", sub: "6W · 1L this week", w: 6, l: 1, rating: 1923 },
+interface Player {
+  id: string;
+  username: string;
+  wins: number;
+  losses: number;
+  winPct: number;
+}
+
+const AVATAR_COLORS = [
+  "#3b82f6",
+  "#8b5cf6",
+  "#22c55e",
+  "#f59e0b",
+  "#06b6d4",
+  "#ec4899",
+  "#f97316",
+  "#a78bfa",
 ];
+
+function avatarColor(id: string): string {
+  let hash = 0;
+  for (const c of id) hash = (hash * 31 + c.charCodeAt(0)) & 0xffffffff;
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+}
 
 const rankColor = (r: number) => {
   if (r === 1) return "#fbbf24";
@@ -20,6 +37,7 @@ const rankColor = (r: number) => {
 
 export default function LeaderboardPreview() {
   const ref = useRef<HTMLDivElement>(null);
+  const [players, setPlayers] = useState<Player[]>([]);
 
   useEffect(() => {
     const obs = new IntersectionObserver(
@@ -34,6 +52,15 @@ export default function LeaderboardPreview() {
     );
     ref.current?.querySelectorAll(".rv").forEach((el) => obs.observe(el));
     return () => obs.disconnect();
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/leaderboard?type=unranked&section=global&period=alltime&page=1")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.players) setPlayers(data.players.slice(0, 5));
+      })
+      .catch(() => {});
   }, []);
 
   return (
@@ -87,7 +114,9 @@ export default function LeaderboardPreview() {
                 marginBottom: "32px",
               }}
             >
-              Every debate is on the record. Win consistently and your name rises here. The leaderboard updates in real time after every result.
+              Every debate is on the record. Win consistently and your name
+              rises here. The leaderboard updates in real time after every
+              result.
             </p>
             <Link
               href="/rankings"
@@ -141,104 +170,150 @@ export default function LeaderboardPreview() {
                 <span>Debater</span>
                 <span style={{ textAlign: "right" }}>W</span>
                 <span style={{ textAlign: "right" }}>L</span>
-                <span style={{ textAlign: "right" }}>Rating</span>
+                <span style={{ textAlign: "right" }}>Wins ↓</span>
               </div>
 
               {/* Rows */}
-              {PLAYERS.map((p, i) => (
-                <div
-                  key={p.name}
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "44px 1fr 64px 64px 80px",
-                    alignItems: "center",
-                    padding: "14px 20px",
-                    borderBottom: i < PLAYERS.length - 1 ? "1px solid var(--border)" : "none",
-                    transition: "background 0.2s",
-                    cursor: "pointer",
-                  }}
-                  onMouseEnter={(e) => {
-                    (e.currentTarget as HTMLDivElement).style.background = "rgba(0,255,135,0.02)";
-                  }}
-                  onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLDivElement).style.background = "transparent";
-                  }}
-                >
-                  <div
-                    style={{
-                      fontFamily: "var(--font-oswald, 'Oswald', sans-serif)",
-                      fontSize: "24px",
-                      fontWeight: 600,
-                      color: rankColor(p.rank),
-                    }}
-                  >
-                    {p.rank}
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              {players.length === 0
+                ? Array.from({ length: 5 }).map((_, i) => (
                     <div
+                      key={i}
                       style={{
-                        width: "34px",
-                        height: "34px",
-                        borderRadius: "50%",
-                        background: p.color,
-                        display: "flex",
+                        display: "grid",
+                        gridTemplateColumns: "44px 1fr 64px 64px 80px",
                         alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: "13px",
-                        fontWeight: 700,
-                        color: "#fff",
-                        flexShrink: 0,
+                        padding: "14px 20px",
+                        borderBottom: i < 4 ? "1px solid var(--border)" : "none",
+                        gap: "8px",
                       }}
                     >
-                      {p.initial}
+                      {[32, 120, 28, 28, 36].map((w, j) => (
+                        <div
+                          key={j}
+                          style={{
+                            height: "10px",
+                            borderRadius: "2px",
+                            background: "var(--border2)",
+                            opacity: 0.5,
+                            width: `${w}px`,
+                            marginLeft: j >= 2 ? "auto" : "0",
+                          }}
+                        />
+                      ))}
                     </div>
-                    <div>
-                      <div style={{ fontSize: "14px", fontWeight: 600 }}>{p.name}</div>
+                  ))
+                : players.map((p, i) => (
+                    <div
+                      key={p.id}
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "44px 1fr 64px 64px 80px",
+                        alignItems: "center",
+                        padding: "14px 20px",
+                        borderBottom:
+                          i < players.length - 1
+                            ? "1px solid var(--border)"
+                            : "none",
+                        transition: "background 0.2s",
+                        cursor: "pointer",
+                      }}
+                      onMouseEnter={(e) => {
+                        (e.currentTarget as HTMLDivElement).style.background =
+                          "rgba(0,255,135,0.02)";
+                      }}
+                      onMouseLeave={(e) => {
+                        (e.currentTarget as HTMLDivElement).style.background =
+                          "transparent";
+                      }}
+                    >
                       <div
                         style={{
-                          fontSize: "11px",
-                          color: "var(--dim)",
-                          fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+                          fontFamily:
+                            "var(--font-oswald, 'Oswald', sans-serif)",
+                          fontSize: "24px",
+                          fontWeight: 600,
+                          color: rankColor(i + 1),
                         }}
                       >
-                        {p.sub}
+                        {i + 1}
+                      </div>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "10px",
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: "34px",
+                            height: "34px",
+                            borderRadius: "50%",
+                            background: avatarColor(p.id),
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: "13px",
+                            fontWeight: 700,
+                            color: "#fff",
+                            flexShrink: 0,
+                          }}
+                        >
+                          {p.username[0]?.toUpperCase() ?? "?"}
+                        </div>
+                        <div>
+                          <div style={{ fontSize: "14px", fontWeight: 600 }}>
+                            {p.username}
+                          </div>
+                          <div
+                            style={{
+                              fontSize: "11px",
+                              color: "var(--dim)",
+                              fontFamily:
+                                "var(--font-mono, 'Roboto Mono', monospace)",
+                            }}
+                          >
+                            {p.wins}W · {p.losses}L · {p.winPct}% win rate
+                          </div>
+                        </div>
+                      </div>
+                      <div
+                        style={{
+                          textAlign: "right",
+                          fontFamily:
+                            "var(--font-mono, 'Roboto Mono', monospace)",
+                          fontSize: "12px",
+                          color: "var(--dim)",
+                        }}
+                      >
+                        {p.wins}
+                      </div>
+                      <div
+                        style={{
+                          textAlign: "right",
+                          fontFamily:
+                            "var(--font-mono, 'Roboto Mono', monospace)",
+                          fontSize: "12px",
+                          color: "var(--dim)",
+                        }}
+                      >
+                        {p.losses}
+                      </div>
+                      <div
+                        style={{
+                          textAlign: "right",
+                          fontFamily:
+                            "var(--font-oswald, 'Oswald', sans-serif)",
+                          fontSize: "22px",
+                          fontWeight: 600,
+                          color: "var(--g)",
+                          letterSpacing: "1px",
+                        }}
+                      >
+                        {p.wins}
                       </div>
                     </div>
-                  </div>
-                  <div
-                    style={{
-                      textAlign: "right",
-                      fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
-                      fontSize: "12px",
-                      color: "var(--dim)",
-                    }}
-                  >
-                    {p.w}
-                  </div>
-                  <div
-                    style={{
-                      textAlign: "right",
-                      fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
-                      fontSize: "12px",
-                      color: "var(--dim)",
-                    }}
-                  >
-                    {p.l}
-                  </div>
-                  <div
-                    style={{
-                      textAlign: "right",
-                      fontFamily: "var(--font-oswald, 'Oswald', sans-serif)",
-                      fontSize: "22px",
-                      fontWeight: 600,
-                      color: "var(--g)",
-                      letterSpacing: "1px",
-                    }}
-                  >
-                    {p.rating}
-                  </div>
-                </div>
-              ))}
+                  ))}
             </div>
           </div>
         </div>

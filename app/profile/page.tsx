@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import EditProfileModal from "@/components/profile/EditProfileModal";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
 interface Debate {
   id: string;
-  result: "WIN" | "LOSS";
+  result: "WIN" | "LOSS" | "DRAW";
   topic: string;
   sideA: string;
   sideB: string;
@@ -17,123 +19,24 @@ interface Debate {
 }
 
 interface UserProfile {
-  displayName: string;
   username: string;
+  name: string;
+  country: string | null;
+  club: string | null;
   joinDate: string;
-  seasonJoined: string;
   elo: number;
-  eloChange: number;
-  rank: number;
-  totalDebaters: number;
   wins: number;
   losses: number;
+  draws: number;
+  debates_count: number;
+  rank: number;
+  totalDebaters: number;
   debates: Debate[];
+  username_changed_at: string | null;
+  avatar_url: string | null;
 }
 
-// ── Mock data ──────────────────────────────────────────────────────────────────
-
-const PROFILE: UserProfile = {
-  displayName: "TacticalGenius",
-  username: "tacticalgenius_",
-  joinDate: "Jan 2026",
-  seasonJoined: "01",
-  elo: 1744,
-  eloChange: 38,
-  rank: 9,
-  totalDebaters: 2431,
-  wins: 6,
-  losses: 2,
-  debates: [
-    {
-      id: "1",
-      result: "WIN",
-      topic: "Messi Is The Greatest Of All Time",
-      sideA: "Messi",
-      sideB: "Ronaldo",
-      userSide: "A",
-      crowdCount: 1203,
-      eloDelta: 24,
-      date: "14 Mar 2026",
-    },
-    {
-      id: "2",
-      result: "WIN",
-      topic: "Haaland Will Break Every Premier League Record",
-      sideA: "For",
-      sideB: "Against",
-      userSide: "A",
-      crowdCount: 847,
-      eloDelta: 18,
-      date: "12 Mar 2026",
-    },
-    {
-      id: "3",
-      result: "LOSS",
-      topic: "Tiki-Taka Is Still The Best System",
-      sideA: "Pro Tiki-Taka",
-      sideB: "Gegenpressing",
-      userSide: "A",
-      crowdCount: 612,
-      eloDelta: -14,
-      date: "10 Mar 2026",
-    },
-    {
-      id: "4",
-      result: "WIN",
-      topic: "The Champions League Format Change Was A Mistake",
-      sideA: "Old Format",
-      sideB: "New Format",
-      userSide: "A",
-      crowdCount: 934,
-      eloDelta: 21,
-      date: "8 Mar 2026",
-    },
-    {
-      id: "5",
-      result: "WIN",
-      topic: "VAR Has Ruined Football",
-      sideA: "Pro VAR",
-      sideB: "Anti VAR",
-      userSide: "B",
-      crowdCount: 1089,
-      eloDelta: 16,
-      date: "6 Mar 2026",
-    },
-    {
-      id: "6",
-      result: "LOSS",
-      topic: "Bellingham vs Pedri: Who Wins The Next Ballon d'Or",
-      sideA: "Bellingham",
-      sideB: "Pedri",
-      userSide: "A",
-      crowdCount: 741,
-      eloDelta: -27,
-      date: "3 Mar 2026",
-    },
-    {
-      id: "7",
-      result: "WIN",
-      topic: "Pep Guardiola Is The Greatest Manager Ever",
-      sideA: "For",
-      sideB: "Against",
-      userSide: "A",
-      crowdCount: 1456,
-      eloDelta: 32,
-      date: "28 Feb 2026",
-    },
-    {
-      id: "8",
-      result: "WIN",
-      topic: "The Premier League Is The Best League In The World",
-      sideA: "PL",
-      sideB: "La Liga",
-      userSide: "A",
-      crowdCount: 889,
-      eloDelta: 19,
-      date: "25 Feb 2026",
-    },
-  ],
-};
+// ── Ticker ────────────────────────────────────────────────────────────────────
 
 const TICKER_TOPICS = [
   { icon: "⚽", topic: "Messi vs Ronaldo", category: "GOAT Debate" },
@@ -148,20 +51,19 @@ const TICKER_ITEMS = [...TICKER_TOPICS, ...TICKER_TOPICS];
 // ── Sub-components ─────────────────────────────────────────────────────────────
 
 function DebateRow({ debate }: { debate: Debate }) {
-  const [hovered, setHovered] = useState(false);
   const isWin = debate.result === "WIN";
+  const isDraw = debate.result === "DRAW";
+  const accentColor = isWin ? "var(--g)" : isDraw ? "var(--dim)" : "var(--red)";
 
   return (
     <div
       className="rv"
       onMouseEnter={(e) => {
-        setHovered(true);
         e.currentTarget.style.background = "var(--dark3)";
         const bar = e.currentTarget.querySelector(".row-accent") as HTMLElement | null;
         if (bar) bar.style.opacity = "1";
       }}
       onMouseLeave={(e) => {
-        setHovered(false);
         e.currentTarget.style.background = "var(--card)";
         const bar = e.currentTarget.querySelector(".row-accent") as HTMLElement | null;
         if (bar) bar.style.opacity = "0";
@@ -189,13 +91,13 @@ function DebateRow({ debate }: { debate: Debate }) {
           top: 0,
           bottom: 0,
           width: "2px",
-          background: isWin ? "var(--g)" : "var(--red)",
+          background: accentColor,
           opacity: 0,
           transition: "opacity 0.25s",
         }}
       />
 
-      {/* WIN/LOSS badge */}
+      {/* WIN/LOSS/DRAW badge */}
       <div style={{
         display: "inline-flex",
         alignItems: "center",
@@ -207,9 +109,19 @@ function DebateRow({ debate }: { debate: Debate }) {
         letterSpacing: "2px",
         textTransform: "uppercase",
         borderRadius: "2px",
-        background: isWin ? "rgba(0,255,135,0.1)" : "rgba(255,45,85,0.1)",
-        color: isWin ? "var(--g)" : "var(--red)",
-        border: `1px solid ${isWin ? "rgba(0,255,135,0.2)" : "rgba(255,45,85,0.2)"}`,
+        background: isWin
+          ? "rgba(0,255,135,0.1)"
+          : isDraw
+          ? "rgba(85,85,102,0.15)"
+          : "rgba(255,45,85,0.1)",
+        color: accentColor,
+        border: `1px solid ${
+          isWin
+            ? "rgba(0,255,135,0.2)"
+            : isDraw
+            ? "rgba(85,85,102,0.25)"
+            : "rgba(255,45,85,0.2)"
+        }`,
         whiteSpace: "nowrap",
       }}>
         {debate.result}
@@ -269,12 +181,12 @@ function DebateRow({ debate }: { debate: Debate }) {
           fontSize: "11px",
           fontWeight: 600,
           letterSpacing: "1px",
-          color: debate.eloDelta > 0 ? "var(--g)" : "var(--red)",
+          color: debate.eloDelta > 0 ? "var(--g)" : debate.eloDelta < 0 ? "var(--red)" : "var(--dim)",
           display: "flex",
           alignItems: "center",
           gap: "2px",
         }}>
-          <span>{debate.eloDelta > 0 ? "↑" : "↓"}</span>
+          <span>{debate.eloDelta > 0 ? "↑" : debate.eloDelta < 0 ? "↓" : "—"}</span>
           <span>{Math.abs(debate.eloDelta)}</span>
           <span style={{
             fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
@@ -294,11 +206,22 @@ function DebateRow({ debate }: { debate: Debate }) {
 
 export default function ProfilePage() {
   const ref = useRef<HTMLDivElement>(null);
-  const profile = PROFILE;
-
-  const winRate = Math.round((profile.wins / (profile.wins + profile.losses)) * 100);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [showEdit, setShowEdit] = useState(false);
 
   useEffect(() => {
+    fetch("/api/profile/me")
+      .then((r) => r.json())
+      .then((data) => {
+        setProfile(data);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    if (!profile) return;
     const obs = new IntersectionObserver(
       (entries) =>
         entries.forEach((entry, i) => {
@@ -308,10 +231,25 @@ export default function ProfilePage() {
     );
     ref.current?.querySelectorAll(".rv").forEach((el) => obs.observe(el));
     return () => obs.disconnect();
-  }, []);
+  }, [profile]);
+
+  const winRate =
+    profile && profile.wins + profile.losses + profile.draws > 0
+      ? Math.round((profile.wins / (profile.wins + profile.losses + profile.draws)) * 100)
+      : 0;
 
   return (
-    <div style={{ paddingTop: "60px", minHeight: "100vh", background: "var(--dark)" }}>
+    <div style={{ paddingTop: "60px", paddingBottom: "48px", minHeight: "100vh", background: "var(--dark)" }}>
+      {showEdit && profile && (
+        <EditProfileModal
+          initial={{ name: profile.name, username: profile.username, country: profile.country, club: profile.club, username_changed_at: profile.username_changed_at, avatar_url: profile.avatar_url }}
+          onClose={() => setShowEdit(false)}
+          onSaved={(updated) => {
+            setProfile((p) => p ? { ...p, ...updated } : p);
+            setShowEdit(false);
+          }}
+        />
+      )}
       <div ref={ref}>
 
         {/* ── Profile Header ── */}
@@ -347,335 +285,352 @@ export default function ProfilePage() {
             position: "relative",
             zIndex: 1,
           }}>
-            {/* Top row: avatar + info + edit button */}
-            <div className="rv" style={{
-              display: "flex",
-              alignItems: "flex-start",
-              gap: "28px",
-              paddingBottom: "40px",
-            }}>
-              {/* Avatar */}
+            {loading ? (
               <div style={{
-                width: "80px",
-                height: "80px",
-                borderRadius: "50%",
-                background: "linear-gradient(135deg, var(--g), #00c06a)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontFamily: "var(--font-display, 'Big Shoulders Display', sans-serif)",
-                fontSize: "32px",
-                fontWeight: 900,
-                color: "#000",
-                flexShrink: 0,
-                boxShadow: "0 0 0 2px rgba(0,255,135,0.25), 0 0 32px rgba(0,255,135,0.12)",
+                paddingBottom: "40px",
+                fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+                fontSize: "11px",
+                color: "var(--dim)",
+                letterSpacing: "2px",
+                textTransform: "uppercase",
               }}>
-                {profile.displayName[0].toUpperCase()}
+                Loading…
               </div>
-
-              {/* Name block */}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{
-                  fontFamily: "var(--font-display, 'Big Shoulders Display', sans-serif)",
-                  fontSize: "clamp(32px, 4vw, 52px)",
-                  fontWeight: 900,
-                  textTransform: "uppercase",
-                  letterSpacing: "-2px",
-                  lineHeight: 0.9,
-                  color: "var(--text)",
-                  marginBottom: "8px",
-                }}>
-                  {profile.displayName}
-                </div>
-
-                <div style={{
-                  fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
-                  fontSize: "12px",
-                  color: "var(--dim)",
-                  letterSpacing: "1px",
-                  marginBottom: "14px",
-                }}>
-                  @{profile.username}
-                </div>
-
-                {/* Meta row */}
-                <div style={{
+            ) : profile ? (
+              <>
+                {/* Top row: avatar + info + edit button */}
+                <div className="rv" style={{
                   display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  flexWrap: "wrap",
+                  alignItems: "flex-start",
+                  gap: "28px",
+                  paddingBottom: "40px",
                 }}>
-                  {[
-                    { label: "Joined", value: profile.joinDate },
-                    { label: "Season Joined", value: `S${profile.seasonJoined}` },
-                  ].map((meta, i) => (
-                    <span key={meta.label} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                      {i > 0 && (
-                        <span style={{ width: "1px", height: "10px", background: "var(--border2)", display: "inline-block" }} />
-                      )}
-                      <span style={{
-                        fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
-                        fontSize: "9px",
-                        letterSpacing: "2px",
-                        textTransform: "uppercase",
-                        color: "var(--dim)",
-                        fontVariant: "small-caps",
+                  {/* Avatar */}
+                  <div style={{
+                    width: "80px",
+                    height: "80px",
+                    borderRadius: "50%",
+                    background: profile.avatar_url ? "transparent" : "linear-gradient(135deg, var(--g), #00c06a)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontFamily: "var(--font-display, 'Big Shoulders Display', sans-serif)",
+                    fontSize: "32px",
+                    fontWeight: 900,
+                    color: "#000",
+                    flexShrink: 0,
+                    boxShadow: "0 0 0 2px rgba(0,255,135,0.25), 0 0 32px rgba(0,255,135,0.12)",
+                    overflow: "hidden",
+                  }}>
+                    {profile.avatar_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={profile.avatar_url} alt="Profile" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    ) : (
+                      (profile.name || profile.username)[0].toUpperCase()
+                    )}
+                  </div>
+
+                  {/* Name block */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{
+                      fontFamily: "var(--font-display, 'Big Shoulders Display', sans-serif)",
+                      fontSize: "clamp(32px, 4vw, 52px)",
+                      fontWeight: 900,
+                      textTransform: "uppercase",
+                      letterSpacing: "-2px",
+                      lineHeight: 0.9,
+                      color: "var(--text)",
+                      marginBottom: "8px",
+                    }}>
+                      {profile.name || profile.username}
+                    </div>
+
+                    <div style={{
+                      fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+                      fontSize: "12px",
+                      color: "var(--dim)",
+                      letterSpacing: "1px",
+                      marginBottom: "14px",
+                    }}>
+                      @{profile.username}
+                    </div>
+
+                    {/* Meta row */}
+                    <div style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      flexWrap: "wrap",
+                    }}>
+                      {[
+                        { label: "Joined", value: profile.joinDate },
+                        ...(profile.club ? [{ label: "Club", value: profile.club }] : []),
+                        ...(profile.country ? [{ label: "Country", value: profile.country }] : []),
+                      ].map((meta, i) => (
+                        <span key={meta.label} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                          {i > 0 && (
+                            <span style={{ width: "1px", height: "10px", background: "var(--border2)", display: "inline-block" }} />
+                          )}
+                          <span style={{
+                            fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+                            fontSize: "9px",
+                            letterSpacing: "2px",
+                            textTransform: "uppercase",
+                            color: "var(--dim)",
+                            fontVariant: "small-caps",
+                          }}>
+                            {meta.label}
+                          </span>
+                          <span style={{
+                            fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+                            fontSize: "9px",
+                            letterSpacing: "2px",
+                            textTransform: "uppercase",
+                            color: "var(--text)",
+                            fontVariant: "small-caps",
+                          }}>
+                            {meta.value}
+                          </span>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Edit Profile button */}
+                  <button
+                    onClick={() => setShowEdit(true)}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = "var(--g)";
+                      e.currentTarget.style.color = "var(--g)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = "var(--border2)";
+                      e.currentTarget.style.color = "var(--text)";
+                    }}
+                    style={{
+                      flexShrink: 0,
+                      padding: "9px 20px",
+                      background: "transparent",
+                      border: "1px solid var(--border2)",
+                      color: "var(--text)",
+                      fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+                      fontSize: "9px",
+                      letterSpacing: "2px",
+                      textTransform: "uppercase",
+                      cursor: "pointer",
+                      borderRadius: "2px",
+                      transition: "border-color 0.2s, color 0.2s",
+                      marginTop: "4px",
+                    }}
+                  >
+                    Edit Profile
+                  </button>
+                </div>
+
+                {/* ── Stats strip ── */}
+                <div className="rv" style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr 1fr",
+                  gap: "1px",
+                  background: "var(--border)",
+                  border: "1px solid var(--border)",
+                  borderBottom: "none",
+                }}>
+                  {/* ELO Rating */}
+                  <div style={{ background: "var(--dark2)", padding: "22px 28px" }}>
+                    <div style={{
+                      fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+                      fontSize: "9px",
+                      letterSpacing: "3px",
+                      textTransform: "uppercase",
+                      color: "var(--dim)",
+                      marginBottom: "8px",
+                    }}>ELO Rating</div>
+                    <div style={{ display: "flex", alignItems: "baseline", gap: "10px" }}>
+                      <div style={{
+                        fontFamily: "var(--font-display, 'Big Shoulders Display', sans-serif)",
+                        fontSize: "clamp(40px, 5vw, 64px)",
+                        fontWeight: 900,
+                        letterSpacing: "-2px",
+                        lineHeight: 1,
+                        color: "var(--g)",
                       }}>
-                        {meta.label}
-                      </span>
-                      <span style={{
-                        fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
-                        fontSize: "9px",
-                        letterSpacing: "2px",
-                        textTransform: "uppercase",
+                        {profile.elo.toLocaleString()}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Global Rank */}
+                  <div style={{ background: "var(--dark2)", padding: "22px 28px" }}>
+                    <div style={{
+                      fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+                      fontSize: "9px",
+                      letterSpacing: "3px",
+                      textTransform: "uppercase",
+                      color: "var(--dim)",
+                      marginBottom: "8px",
+                    }}>Global Rank</div>
+                    <div style={{ display: "flex", alignItems: "baseline", gap: "6px" }}>
+                      <div style={{
+                        fontFamily: "var(--font-display, 'Big Shoulders Display', sans-serif)",
+                        fontSize: "clamp(40px, 5vw, 64px)",
+                        fontWeight: 900,
+                        letterSpacing: "-2px",
+                        lineHeight: 1,
                         color: "var(--text)",
-                        fontVariant: "small-caps",
                       }}>
-                        {meta.value}
-                      </span>
-                    </span>
-                  ))}
-                </div>
-              </div>
+                        #{profile.rank}
+                      </div>
+                      <div style={{
+                        fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+                        fontSize: "10px",
+                        color: "var(--dim)",
+                        letterSpacing: "1px",
+                      }}>
+                        of {profile.totalDebaters.toLocaleString()}
+                      </div>
+                    </div>
+                  </div>
 
-              {/* Edit Profile button */}
-              <button
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = "var(--g)";
-                  e.currentTarget.style.color = "var(--g)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = "var(--border2)";
-                  e.currentTarget.style.color = "var(--text)";
-                }}
-                style={{
-                  flexShrink: 0,
-                  padding: "9px 20px",
-                  background: "transparent",
-                  border: "1px solid var(--border2)",
-                  color: "var(--text)",
-                  fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
-                  fontSize: "9px",
-                  letterSpacing: "2px",
-                  textTransform: "uppercase",
-                  cursor: "pointer",
-                  borderRadius: "2px",
-                  transition: "border-color 0.2s, color 0.2s",
-                  marginTop: "4px",
-                }}
-              >
-                Edit Profile
-              </button>
-            </div>
-
-            {/* ── Stats strip ── */}
-            <div className="rv" style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr 1fr",
-              gap: "1px",
-              background: "var(--border)",
-              border: "1px solid var(--border)",
-              borderBottom: "none",
-            }}>
-              {/* ELO Rating */}
-              <div style={{ background: "var(--dark2)", padding: "22px 28px" }}>
-                <div style={{
-                  fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
-                  fontSize: "9px",
-                  letterSpacing: "3px",
-                  textTransform: "uppercase",
-                  color: "var(--dim)",
-                  marginBottom: "8px",
-                }}>ELO Rating</div>
-                <div style={{
-                  display: "flex",
-                  alignItems: "baseline",
-                  gap: "10px",
-                }}>
-                  <div style={{
-                    fontFamily: "var(--font-display, 'Big Shoulders Display', sans-serif)",
-                    fontSize: "clamp(40px, 5vw, 64px)",
-                    fontWeight: 900,
-                    letterSpacing: "-2px",
-                    lineHeight: 1,
-                    color: "var(--g)",
-                  }}>
-                    {profile.elo.toLocaleString()}
-                  </div>
-                  <div style={{
-                    fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
-                    fontSize: "9px",
-                    color: "var(--g)",
-                    letterSpacing: "1px",
-                    padding: "2px 7px",
-                    background: "rgba(0,255,135,0.1)",
-                    border: "1px solid rgba(0,255,135,0.2)",
-                    borderRadius: "2px",
-                  }}>
-                    ↑ {profile.eloChange}
+                  {/* Win Rate */}
+                  <div style={{ background: "var(--dark2)", padding: "22px 28px" }}>
+                    <div style={{
+                      fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+                      fontSize: "9px",
+                      letterSpacing: "3px",
+                      textTransform: "uppercase",
+                      color: "var(--dim)",
+                      marginBottom: "8px",
+                    }}>Win Rate</div>
+                    <div style={{
+                      fontFamily: "var(--font-display, 'Big Shoulders Display', sans-serif)",
+                      fontSize: "clamp(40px, 5vw, 64px)",
+                      fontWeight: 900,
+                      letterSpacing: "-2px",
+                      lineHeight: 1,
+                      color: "var(--text)",
+                      marginBottom: "8px",
+                    }}>
+                      {winRate}%
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <div style={{ height: "2px", background: "var(--border2)", borderRadius: "1px", flex: 1, overflow: "hidden" }}>
+                        <div style={{ height: "100%", background: "var(--g)", width: `${winRate}%`, transition: "width 1s ease" }} />
+                      </div>
+                      <div style={{
+                        fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+                        fontSize: "9px",
+                        color: "var(--dim)",
+                        letterSpacing: "1.5px",
+                        whiteSpace: "nowrap",
+                      }}>
+                        {profile.wins}W · {profile.losses}L
+                      </div>
+                    </div>
                   </div>
                 </div>
+              </>
+            ) : (
+              <div style={{
+                paddingBottom: "40px",
+                fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+                fontSize: "11px",
+                color: "var(--red)",
+                letterSpacing: "2px",
+                textTransform: "uppercase",
+              }}>
+                Could not load profile.
               </div>
-
-              {/* Global Rank */}
-              <div style={{ background: "var(--dark2)", padding: "22px 28px" }}>
-                <div style={{
-                  fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
-                  fontSize: "9px",
-                  letterSpacing: "3px",
-                  textTransform: "uppercase",
-                  color: "var(--dim)",
-                  marginBottom: "8px",
-                }}>Global Rank</div>
-                <div style={{
-                  display: "flex",
-                  alignItems: "baseline",
-                  gap: "6px",
-                }}>
-                  <div style={{
-                    fontFamily: "var(--font-display, 'Big Shoulders Display', sans-serif)",
-                    fontSize: "clamp(40px, 5vw, 64px)",
-                    fontWeight: 900,
-                    letterSpacing: "-2px",
-                    lineHeight: 1,
-                    color: "var(--text)",
-                  }}>
-                    #{profile.rank}
-                  </div>
-                  <div style={{
-                    fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
-                    fontSize: "10px",
-                    color: "var(--dim)",
-                    letterSpacing: "1px",
-                  }}>
-                    of {profile.totalDebaters.toLocaleString()}
-                  </div>
-                </div>
-              </div>
-
-              {/* Win Rate */}
-              <div style={{ background: "var(--dark2)", padding: "22px 28px" }}>
-                <div style={{
-                  fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
-                  fontSize: "9px",
-                  letterSpacing: "3px",
-                  textTransform: "uppercase",
-                  color: "var(--dim)",
-                  marginBottom: "8px",
-                }}>Win Rate</div>
-                <div style={{
-                  fontFamily: "var(--font-display, 'Big Shoulders Display', sans-serif)",
-                  fontSize: "clamp(40px, 5vw, 64px)",
-                  fontWeight: 900,
-                  letterSpacing: "-2px",
-                  lineHeight: 1,
-                  color: "var(--text)",
-                  marginBottom: "8px",
-                }}>
-                  {winRate}%
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <div style={{ height: "2px", background: "var(--border2)", borderRadius: "1px", flex: 1, overflow: "hidden" }}>
-                    <div style={{ height: "100%", background: "var(--g)", width: `${winRate}%`, transition: "width 1s ease" }} />
-                  </div>
-                  <div style={{
-                    fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
-                    fontSize: "9px",
-                    color: "var(--dim)",
-                    letterSpacing: "1.5px",
-                    whiteSpace: "nowrap",
-                  }}>
-                    {profile.wins}W · {profile.losses}L
-                  </div>
-                </div>
-              </div>
-            </div>
+            )}
           </div>
         </div>
 
         {/* ── Debate History ── */}
-        <div style={{ maxWidth: "1400px", margin: "0 auto", padding: "40px 40px 80px" }}>
+        {profile && (
+          <div style={{ maxWidth: "1400px", margin: "0 auto", padding: "40px 40px 80px" }}>
 
-          {/* Section header */}
-          <div className="rv" style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginBottom: "16px",
-          }}>
-            <div className="sec-label" style={{ marginBottom: 0 }}>
-              Debate History
-            </div>
-            <div style={{
-              fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
-              fontSize: "9px",
-              color: "var(--dim)",
-              letterSpacing: "2px",
-              textTransform: "uppercase",
+            {/* Section header */}
+            <div className="rv" style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              marginBottom: "16px",
             }}>
-              {profile.debates.length} debates total
-            </div>
-          </div>
-
-          {/* Column labels */}
-          <div className="rv" style={{
-            display: "grid",
-            gridTemplateColumns: "64px 1fr auto",
-            gap: "20px",
-            padding: "10px 20px",
-            fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
-            fontSize: "9px",
-            color: "var(--dim)",
-            letterSpacing: "2px",
-            textTransform: "uppercase",
-            background: "var(--dark2)",
-            border: "1px solid var(--border)",
-            marginBottom: "1px",
-          }}>
-            <div>Result</div>
-            <div>Topic</div>
-            <div style={{ textAlign: "right" }}>Crowd · Elo</div>
-          </div>
-
-          {/* Debate rows */}
-          <div style={{ border: "1px solid var(--border)", borderTop: "none" }}>
-            {profile.debates.map((debate) => (
-              <DebateRow key={debate.id} debate={debate} />
-            ))}
-          </div>
-
-          {/* Load more */}
-          <div className="rv" style={{ marginTop: "20px", textAlign: "center" }}>
-            <button
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = "var(--g)";
-                e.currentTarget.style.color = "var(--g)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = "var(--border2)";
-                e.currentTarget.style.color = "var(--dim)";
-              }}
-              style={{
-                padding: "11px 32px",
-                background: "transparent",
-                border: "1px solid var(--border2)",
-                color: "var(--dim)",
+              <div className="sec-label" style={{ marginBottom: 0 }}>
+                Debate History
+              </div>
+              <div style={{
                 fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
                 fontSize: "9px",
-                letterSpacing: "3px",
+                color: "var(--dim)",
+                letterSpacing: "2px",
                 textTransform: "uppercase",
-                cursor: "pointer",
-                borderRadius: "2px",
-                transition: "border-color 0.2s, color 0.2s",
-              }}
-            >
-              Load More
-            </button>
+              }}>
+                {profile.debates_count} debates total
+              </div>
+            </div>
+
+            {profile.debates.length === 0 ? (
+              <div className="rv" style={{
+                padding: "40px 20px",
+                textAlign: "center",
+                fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+                fontSize: "11px",
+                color: "var(--dim)",
+                letterSpacing: "2px",
+                textTransform: "uppercase",
+                border: "1px solid var(--border)",
+              }}>
+                No debates yet.{" "}
+              <Link
+                href="/rooms"
+                style={{ color: "var(--text)", textDecoration: "none", transition: "color 0.2s" }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = "var(--g)")}
+                onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text)")}
+              >
+                Enter the pitch.
+              </Link>
+              </div>
+            ) : (
+              <>
+                {/* Column labels */}
+                <div className="rv" style={{
+                  display: "grid",
+                  gridTemplateColumns: "64px 1fr auto",
+                  gap: "20px",
+                  padding: "10px 20px",
+                  fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+                  fontSize: "9px",
+                  color: "var(--dim)",
+                  letterSpacing: "2px",
+                  textTransform: "uppercase",
+                  background: "var(--dark2)",
+                  border: "1px solid var(--border)",
+                  marginBottom: "1px",
+                }}>
+                  <div>Result</div>
+                  <div>Topic</div>
+                  <div style={{ textAlign: "right" }}>Crowd · Elo</div>
+                </div>
+
+                {/* Debate rows */}
+                <div style={{ border: "1px solid var(--border)", borderTop: "none" }}>
+                  {profile.debates.map((debate) => (
+                    <DebateRow key={debate.id} debate={debate} />
+                  ))}
+                </div>
+              </>
+            )}
           </div>
-        </div>
+        )}
 
         {/* ── Bottom Ticker ── */}
         <div style={{
+          position: "fixed",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          zIndex: 100,
           borderTop: "1px solid var(--border)",
           overflow: "hidden",
           padding: "12px 0",

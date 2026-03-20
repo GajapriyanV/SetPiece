@@ -128,13 +128,19 @@ export default function TopNav() {
       <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
         {user ? (
           <>
-            <span style={{
-              fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
-              fontSize: "11px", color: "var(--text)", letterSpacing: "1.5px",
-              textTransform: "uppercase",
-            }}>
+            <Link
+              href="/profile"
+              style={{
+                fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+                fontSize: "11px", color: "var(--text)", letterSpacing: "1.5px",
+                textTransform: "uppercase", textDecoration: "none",
+                transition: "color 0.2s",
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = "var(--g)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text)"; }}
+            >
               {user.user_metadata?.username || user.email?.split("@")[0] || "User"}
-            </span>
+            </Link>
             <button
               onClick={handleSignOut}
               style={{

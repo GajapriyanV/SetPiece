@@ -1,22 +1,16 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
+import SearchableSelect from "@/components/ui/SearchableSelect";
+import { COUNTRIES } from "@/lib/data/countries";
+import { ALL_CLUBS, CLUB_NAMES } from "@/lib/data/clubs";
 
-const CLUBS = [
-  "Arsenal", "Aston Villa", "Atletico Madrid", "Bayern Munich", "Barcelona",
-  "Borussia Dortmund", "Chelsea", "Everton", "Inter Milan", "Juventus",
-  "Liverpool", "Manchester City", "Manchester United", "Milan", "Napoli",
-  "Newcastle United", "Paris Saint-Germain", "Real Madrid", "Roma",
-  "Tottenham Hotspur", "West Ham United",
-];
-
-const COUNTRIES = [
-  "Argentina", "Belgium", "Brazil", "Colombia", "Croatia", "England",
-  "France", "Germany", "Italy", "Netherlands", "Norway", "Portugal",
-  "Senegal", "Spain", "United States", "Uruguay", "Other",
-];
+// League subtitle map for club dropdown
+const CLUB_LEAGUE_MAP: Record<string, string> = Object.fromEntries(
+  ALL_CLUBS.map((c) => [c.name, c.league])
+);
 
 const OAUTH_PROVIDERS: { label: string; provider: "google" | "twitter" | "discord"; icon: React.ReactNode }[] = [
   {
@@ -70,20 +64,52 @@ const STEP_TITLES = [
   { heading: "All Set",        sub: "Review your details"            },
 ];
 
+// Password strength requirements
+function getPasswordErrors(pw: string): string[] {
+  const errs: string[] = [];
+  if (pw.length < 8)            errs.push("At least 8 characters");
+  if (!/[A-Z]/.test(pw))        errs.push("At least 1 uppercase letter");
+  if (!/[a-z]/.test(pw))        errs.push("At least 1 lowercase letter");
+  if (!/[^A-Za-z0-9]/.test(pw)) errs.push("At least 1 special character");
+  return errs;
+}
+
 export default function RegisterPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  // complete=1 → OAuth user who already has auth credentials, just needs profile
+  const isComplete = searchParams.get("complete") === "1";
+
   const supabase = createClient();
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(isComplete ? 2 : 1);
   const [focused, setFocused] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [passwordTouched, setPasswordTouched] = useState(false);
   const [form, setForm] = useState({
     username: "", email: "", password: "", confirm: "",
     name: "", country: "", club: "",
   });
 
-  const set = (key: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+  // Pre-fill name from Google metadata when in complete mode
+  useEffect(() => {
+    if (!isComplete) return;
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return;
+      const meta = user.user_metadata ?? {};
+      setForm((prev) => ({
+        ...prev,
+        name: meta.full_name ?? meta.name ?? prev.name,
+      }));
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isComplete]);
+
+  const set = (key: string) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm(prev => ({ ...prev, [key]: e.target.value }));
+
+  const setField = (key: string) => (value: string) =>
+    setForm(prev => ({ ...prev, [key]: value }));
 
   const inputStyle = (key: string): React.CSSProperties => ({
     width: "100%", padding: "10px 14px",
@@ -116,7 +142,7 @@ export default function RegisterPage() {
     setError("");
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
-      options: { redirectTo: `${window.location.origin}/` },
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
     });
     if (error) setError(error.message);
   };
@@ -131,8 +157,9 @@ export default function RegisterPage() {
       setError("Passwords do not match");
       return;
     }
-    if (form.password.length < 6) {
-      setError("Password must be at least 6 characters");
+    const pwErrors = getPasswordErrors(form.password);
+    if (pwErrors.length > 0) {
+      setError(pwErrors[0]);
       return;
     }
     setLoading(true);
@@ -151,6 +178,23 @@ export default function RegisterPage() {
     setStep(2);
   };
 
+  const handleStep2Next = () => {
+    setError("");
+    if (isComplete && !form.username.trim()) {
+      setError("Please choose a username");
+      return;
+    }
+    if (form.country && !COUNTRIES.includes(form.country)) {
+      setError("Please select a valid country from the list");
+      return;
+    }
+    if (form.club && !CLUB_NAMES.includes(form.club)) {
+      setError("Please select a valid club from the list");
+      return;
+    }
+    setStep(3);
+  };
+
   const handleCreateAccount = async () => {
     setError("");
     setLoading(true);
@@ -158,7 +202,7 @@ export default function RegisterPage() {
     if (user) {
       const { error } = await supabase.from("profiles").upsert({
         id: user.id,
-        username: form.username,
+        username: form.username || user.user_metadata?.username || null,
         name: form.name,
         country: form.country,
         club: form.club,
@@ -173,6 +217,7 @@ export default function RegisterPage() {
     router.push("/");
   };
 
+  const passwordErrors = passwordTouched ? getPasswordErrors(form.password) : [];
   const { heading, sub } = STEP_TITLES[step - 1];
 
   return (
@@ -206,7 +251,7 @@ export default function RegisterPage() {
             fontSize: "9px", color: "var(--dim)", letterSpacing: "2px",
             textTransform: "uppercase",
           }}>
-            Step {step} of 3
+            {isComplete ? "Complete Profile" : `Step ${step} of 3`}
           </div>
         </div>
 
@@ -232,7 +277,7 @@ export default function RegisterPage() {
 
           {error && <div style={errorStyle}>{error}</div>}
 
-          {/* ── Step 1 ── */}
+          {/* ── Step 1 (email/password signup only) ── */}
           {step === 1 && (
             <>
               {/* OAuth */}
@@ -284,13 +329,36 @@ export default function RegisterPage() {
                   onChange={set("email")} onFocus={() => setFocused("email")} onBlur={() => setFocused("")}
                   style={inputStyle("email")} />
               </div>
-              <div style={{ marginBottom: "10px" }}>
+              <div style={{ marginBottom: "6px" }}>
                 <label style={labelStyle}>Password</label>
                 <input type="password" placeholder="········" value={form.password}
-                  onChange={set("password")} onFocus={() => setFocused("password")} onBlur={() => setFocused("")}
+                  onChange={(e) => { set("password")(e); setPasswordTouched(true); }}
+                  onFocus={() => setFocused("password")} onBlur={() => setFocused("")}
                   style={{ ...inputStyle("password"), letterSpacing: "2px" }} />
+                {/* Inline password hints */}
+                {passwordTouched && form.password.length > 0 && (
+                  <div style={{ marginTop: "6px", display: "flex", flexDirection: "column", gap: "3px" }}>
+                    {[
+                      { rule: form.password.length >= 8,            label: "8+ characters" },
+                      { rule: /[A-Z]/.test(form.password),          label: "Uppercase letter" },
+                      { rule: /[a-z]/.test(form.password),          label: "Lowercase letter" },
+                      { rule: /[^A-Za-z0-9]/.test(form.password),   label: "Special character" },
+                    ].map(({ rule, label }) => (
+                      <div key={label} style={{
+                        display: "flex", alignItems: "center", gap: "6px",
+                        fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+                        fontSize: "9px", letterSpacing: "1px",
+                        color: rule ? "var(--g)" : "var(--dim)",
+                        transition: "color 0.2s",
+                      }}>
+                        <span>{rule ? "✓" : "·"}</span>
+                        <span>{label}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-              <div style={{ marginBottom: "16px" }}>
+              <div style={{ marginBottom: "16px", marginTop: "10px" }}>
                 <label style={labelStyle}>Confirm Password</label>
                 <input type="password" placeholder="········" value={form.confirm}
                   onChange={set("confirm")} onFocus={() => setFocused("confirm")} onBlur={() => setFocused("")}
@@ -309,42 +377,67 @@ export default function RegisterPage() {
             </>
           )}
 
-          {/* ── Step 2 ── */}
+          {/* ── Step 2 (profile details) ── */}
           {step === 2 && (
             <>
+              {/* Username is required in complete mode (OAuth users have no username yet) */}
+              {isComplete && (
+                <div style={{ marginBottom: "10px" }}>
+                  <label style={labelStyle}>Username</label>
+                  <input type="text" placeholder="your_handle" value={form.username}
+                    onChange={set("username")} onFocus={() => setFocused("username")} onBlur={() => setFocused("")}
+                    style={inputStyle("username")} />
+                </div>
+              )}
+
               <div style={{ marginBottom: "10px" }}>
                 <label style={labelStyle}>Full Name</label>
                 <input type="text" placeholder="Your name" value={form.name}
                   onChange={set("name")} onFocus={() => setFocused("name")} onBlur={() => setFocused("")}
                   style={inputStyle("name")} />
               </div>
+
               <div style={{ marginBottom: "10px" }}>
-                <label style={labelStyle}>Country</label>
-                <select value={form.country} onChange={set("country")}
-                  onFocus={() => setFocused("country")} onBlur={() => setFocused("")}
-                  style={{ ...inputStyle("country"), appearance: "none" as const }}>
-                  <option value="" disabled>Select country</option>
-                  {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
+                <SearchableSelect
+                  label="Country"
+                  placeholder="Search countries..."
+                  options={COUNTRIES}
+                  value={form.country}
+                  onChange={setField("country")}
+                  fieldKey="country"
+                  focused={focused}
+                  onFocus={setFocused}
+                  onBlur={() => setFocused("")}
+                />
               </div>
+
               <div style={{ marginBottom: "16px" }}>
-                <label style={labelStyle}>Favourite Club</label>
-                <select value={form.club} onChange={set("club")}
-                  onFocus={() => setFocused("club")} onBlur={() => setFocused("")}
-                  style={{ ...inputStyle("club"), appearance: "none" as const }}>
-                  <option value="" disabled>Select club</option>
-                  {CLUBS.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
+                <SearchableSelect
+                  label="Favourite Club"
+                  placeholder="Search clubs..."
+                  options={CLUB_NAMES}
+                  value={form.club}
+                  onChange={setField("club")}
+                  fieldKey="club"
+                  focused={focused}
+                  onFocus={setFocused}
+                  onBlur={() => setFocused("")}
+                  subtitleMap={CLUB_LEAGUE_MAP}
+                />
               </div>
 
               <div style={{ display: "flex", gap: "12px" }}>
-                <button style={backBtn}
-                  onClick={() => setStep(1)}
-                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--dim)"; e.currentTarget.style.color = "var(--text)"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--border2)"; e.currentTarget.style.color = "var(--dim)"; }}
-                >← Back</button>
-                <button style={nextBtn}
-                  onClick={() => setStep(3)}
+                {/* Hide back button in complete mode — can't go back to step 1 (already authed) */}
+                {!isComplete && (
+                  <button style={backBtn}
+                    onClick={() => setStep(1)}
+                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--dim)"; e.currentTarget.style.color = "var(--text)"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--border2)"; e.currentTarget.style.color = "var(--dim)"; }}
+                  >← Back</button>
+                )}
+                <button
+                  style={{ ...nextBtn, flex: isComplete ? "unset" : 2, width: isComplete ? "100%" : undefined }}
+                  onClick={handleStep2Next}
                   onMouseEnter={(e) => { e.currentTarget.style.background = "var(--g2)"; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = "var(--g)"; }}
                 >Continue →</button>
@@ -352,7 +445,7 @@ export default function RegisterPage() {
             </>
           )}
 
-          {/* ── Step 3 ── */}
+          {/* ── Step 3 (review + submit) ── */}
           {step === 3 && (
             <>
               <div style={{
@@ -361,7 +454,7 @@ export default function RegisterPage() {
               }}>
                 {[
                   { label: "Username",  value: form.username || "—" },
-                  { label: "Email",     value: form.email    || "—" },
+                  ...(!isComplete ? [{ label: "Email", value: form.email || "—" }] : []),
                   { label: "Full Name", value: form.name     || "—" },
                   { label: "Country",   value: form.country  || "—" },
                   { label: "Club",      value: form.club     || "—" },
@@ -397,7 +490,7 @@ export default function RegisterPage() {
                   onMouseEnter={(e) => { if (!loading) e.currentTarget.style.background = "var(--g2)"; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = "var(--g)"; }}
                   style={{ ...nextBtn, opacity: loading ? 0.6 : 1 }}
-                >{loading ? "Creating..." : "Create Account →"}</button>
+                >{loading ? "Saving..." : "Create Account →"}</button>
               </div>
             </>
           )}
@@ -405,7 +498,7 @@ export default function RegisterPage() {
 
         {/* Progress bar */}
         <div style={{ display: "flex", gap: "2px", padding: "10px 24px", borderTop: "1px solid var(--border)" }}>
-          {[1, 2, 3].map((s) => (
+          {(isComplete ? [2, 3] : [1, 2, 3]).map((s) => (
             <div key={s} style={{
               flex: 1, height: "3px", borderRadius: "2px",
               background: s <= step ? "var(--g)" : "var(--border2)",

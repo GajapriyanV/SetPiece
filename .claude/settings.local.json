@@ -25,7 +25,10 @@
       "Bash(sleep:*)",
       "Bash(curl:*)",
       "Bash(netstat:*)",
-      "Bash(taskkill:*)"
+      "Bash(taskkill:*)",
+      "Bash(ls -la \"c:\\\\Users\\\\Abilan\\\\Desktop\\\\School\\\\SetPiece\\\\app\\\\profile\"\" 2>&1 || echo \"Directory does not exist or is empty \")",
+      "Bash(ls c:/Users/Abilan/Desktop/School/SetPiece/*.ts)",
+      "Bash(node -e \":*)"
     ]
   }
 }

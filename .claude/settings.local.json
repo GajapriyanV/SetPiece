@@ -34,7 +34,8 @@
       "Bash(while read:*)",
       "Bash(do taskkill:*)",
       "Bash(done)",
-      "Bash(ls -la /c/Users/gajap/Desktop/SetPiece/*.example)"
+      "Bash(ls -la /c/Users/gajap/Desktop/SetPiece/*.example)",
+      "Bash(git rm:*)"
     ]
   }
 }

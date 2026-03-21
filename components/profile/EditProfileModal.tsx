@@ -2,20 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
+import { COUNTRIES } from "@/lib/data/countries";
+import { ALL_CLUBS, CLUB_NAMES as CLUBS } from "@/lib/data/clubs";
+import SearchableSelect from "@/components/ui/SearchableSelect";
 
-const CLUBS = [
-  "Arsenal", "Aston Villa", "Atletico Madrid", "Bayern Munich", "Barcelona",
-  "Borussia Dortmund", "Chelsea", "Everton", "Inter Milan", "Juventus",
-  "Liverpool", "Manchester City", "Manchester United", "Milan", "Napoli",
-  "Newcastle United", "Paris Saint-Germain", "Real Madrid", "Roma",
-  "Tottenham Hotspur", "West Ham United",
-];
-
-const COUNTRIES = [
-  "Argentina", "Belgium", "Brazil", "Colombia", "Croatia", "England",
-  "France", "Germany", "Italy", "Netherlands", "Norway", "Portugal",
-  "Senegal", "Spain", "United States", "Uruguay", "Other",
-];
+const CLUB_LEAGUE_MAP: Record<string, string> = Object.fromEntries(
+  ALL_CLUBS.map((c) => [c.name, c.league])
+);
 
 interface EditProfileModalProps {
   initial: {
@@ -89,8 +82,11 @@ export default function EditProfileModal({ initial, onClose, onSaved }: EditProf
     return () => window.removeEventListener("keydown", handler);
   }, [onClose]);
 
-  const set = (field: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+  const set = (field: string) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((f) => ({ ...f, [field]: e.target.value }));
+
+  const setField = (field: string) => (value: string) =>
+    setForm((f) => ({ ...f, [field]: value }));
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -453,32 +449,33 @@ export default function EditProfileModal({ initial, onClose, onSaved }: EditProf
 
           {/* Country */}
           <div style={{ marginBottom: "14px" }}>
-            <label style={labelStyle}>Country</label>
-            <select
+            <SearchableSelect
+              label="Country"
+              placeholder="Search countries..."
+              options={COUNTRIES}
               value={form.country}
-              onChange={set("country")}
-              onFocus={() => setFocused("country")}
+              onChange={setField("country")}
+              fieldKey="country"
+              focused={focused}
+              onFocus={setFocused}
               onBlur={() => setFocused("")}
-              style={{ ...inputStyle("country"), appearance: "none" as const }}
-            >
-              <option value="">Not specified</option>
-              {COUNTRIES.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
+            />
           </div>
 
           {/* Favourite Club */}
           <div style={{ marginBottom: "24px" }}>
-            <label style={labelStyle}>Favourite Club</label>
-            <select
+            <SearchableSelect
+              label="Favourite Club"
+              placeholder="Search clubs..."
+              options={CLUBS}
               value={form.club}
-              onChange={set("club")}
-              onFocus={() => setFocused("club")}
+              onChange={setField("club")}
+              fieldKey="club"
+              focused={focused}
+              onFocus={setFocused}
               onBlur={() => setFocused("")}
-              style={{ ...inputStyle("club"), appearance: "none" as const }}
-            >
-              <option value="">Not specified</option>
-              {CLUBS.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
+              subtitleMap={CLUB_LEAGUE_MAP}
+            />
           </div>
 
           {/* Error */}

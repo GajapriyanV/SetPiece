@@ -230,9 +230,11 @@ export default function RegisterPage() {
       return;
     }
 
-    // Mark onboarding complete in auth metadata — proxy reads this without a DB query
+    // Mark onboarding complete in auth metadata — proxy reads this without a DB query.
+    // Do NOT mirror username here: profiles.username is canonical; writing it to
+    // user_metadata would go stale if the user later changes their handle.
     const { error: metaError } = await supabase.auth.updateUser({
-      data: { onboarding_complete: true, username: resolvedUsername },
+      data: { onboarding_complete: true },
     });
     if (metaError) {
       // Non-fatal: profile is written. Log and continue.

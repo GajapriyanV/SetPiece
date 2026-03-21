@@ -79,7 +79,7 @@ export async function GET() {
 
   return NextResponse.json({
     username: profile.username,
-    name: profile.name ?? profile.username,
+    name: profile.name || profile.username,   // profiles.name is canonical; username is fallback
     country: profile.country ?? null,
     club: profile.club ?? null,
     elo: profile.elo ?? 1200,

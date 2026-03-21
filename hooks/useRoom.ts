@@ -4,6 +4,7 @@ import { useEffect, useReducer, useCallback, useRef } from "react";
 import { useSocket } from "./useSocket";
 import type {
   FullRoomState,
+  FeaturedMetaBrief,
   RoomMember,
   Side,
   UserBrief,
@@ -19,6 +20,13 @@ interface RoomUIState extends FullRoomState {
   results: ResultsData | null;
   countdown: number | null; // debate starting countdown
   myVote: Side | null;
+  closingAt: number | null;
+  sidePickEndsAt: number | null;
+  skipVotes: { count: number; required: number; votedUserIds: string[] } | null;
+  closed: boolean;
+  closedReason: string | null;
+  debateCancelled: { reason: string; username: string } | null;
+  disconnectedDebater: { userId: string; username: string } | null;
 }
 
 type RoomAction =
@@ -37,7 +45,17 @@ type RoomAction =
   | { type: "CHAT_MESSAGE"; message: ChatMessage }
   | { type: "TOPIC_CHANGE"; topic: string; sideALabel: string; sideBLabel: string }
   | { type: "MY_VOTE"; side: Side }
-  | { type: "COUNTDOWN_TICK"; value: number };
+  | { type: "COUNTDOWN_TICK"; value: number }
+  | { type: "FEATURED_SIDE_PICK_STARTED"; sidePickEndsAt: number }
+  | { type: "FEATURED_TOPIC_REVEAL"; topic: string; sideALabel: string; sideBLabel: string; topicIndex: number; debatesCompleted: number; sidePickEndsAt: number }
+  | { type: "FEATURED_DEBATER_DISCONNECTED"; userId: string; username: string }
+  | { type: "DEBATER_RECONNECTED"; userId: string; username: string }
+  | { type: "FEATURED_DEBATE_CANCELLED"; reason: string; username: string }
+  | { type: "FEATURED_TOPIC_SKIPPED" }
+  | { type: "FEATURED_DEBATE_COMPLETE"; debatesCompleted: number; maxDebates: number }
+  | { type: "ROOM_CLOSING"; reason: string; closingAt: number }
+  | { type: "ROOM_CLOSED"; reason: string }
+  | { type: "FEATURED_SKIP_VOTES"; count: number; required: number; votedUserIds: string[] };
 
 const initialState: RoomUIState = {
   roomId: "",
@@ -52,10 +70,19 @@ const initialState: RoomUIState = {
   chat: [],
   debateId: null,
   votes: null,
+  isFeatured: false,
+  featuredMeta: null,
   voteWindowEndsAt: null,
   results: null,
   countdown: null,
   myVote: null,
+  closingAt: null,
+  sidePickEndsAt: null,
+  skipVotes: null,
+  closed: false,
+  closedReason: null,
+  debateCancelled: null,
+  disconnectedDebater: null,
 };
 
 function roomReducer(state: RoomUIState, action: RoomAction): RoomUIState {
@@ -73,21 +100,35 @@ function roomReducer(state: RoomUIState, action: RoomAction): RoomUIState {
         ],
       };
 
-    case "MEMBER_LEFT":
-      return { ...state, members: state.members.filter((m) => m.userId !== action.userId) };
+    case "MEMBER_LEFT": {
+      const filtered = state.members.filter((m) => m.userId !== action.userId);
+      return {
+        ...state,
+        members: filtered,
+        // Clear debater references if the leaving user was a debater
+        debaterA: state.debaterA?.userId === action.userId ? null : state.debaterA,
+        debaterB: state.debaterB?.userId === action.userId ? null : state.debaterB,
+      };
+    }
 
-    case "SIDES_UPDATED":
+    case "SIDES_UPDATED": {
+      // Only update status if we're in lobby/side_pick — don't override live/voting/results
+      const inLobbyOrPick = state.status === "lobby" || state.status === "side_pick";
+      const newStatus = inLobbyOrPick
+        ? ((action.sides.a || action.sides.b) ? "side_pick" : "lobby")
+        : state.status;
       return {
         ...state,
         debaterA: action.sides.a,
         debaterB: action.sides.b,
-        status: (action.sides.a || action.sides.b) ? "side_pick" : "lobby",
+        status: newStatus,
         members: state.members.map((m) => {
           if (action.sides.a?.userId === m.userId) return { ...m, side: "a" as Side };
           if (action.sides.b?.userId === m.userId) return { ...m, side: "b" as Side };
           return { ...m, side: null };
         }),
       };
+    }
 
     case "READY_UPDATED":
       return {
@@ -98,7 +139,7 @@ function roomReducer(state: RoomUIState, action: RoomAction): RoomUIState {
       };
 
     case "DEBATE_STARTING":
-      return { ...state, debateId: action.debateId, countdown: action.countdown };
+      return { ...state, status: "live", debateId: action.debateId, countdown: action.countdown };
 
     case "COUNTDOWN_TICK":
       return { ...state, countdown: action.value };
@@ -138,11 +179,80 @@ function roomReducer(state: RoomUIState, action: RoomAction): RoomUIState {
         status: "lobby",
         debaterA: null,
         debaterB: null,
+        phase: null,
+        debateId: null,
+        results: null,
+        myVote: null,
+        countdown: null,
+        disconnectedDebater: null,
+        debateCancelled: null,
+        voteWindowEndsAt: null,
+        votes: null,
+        sidePickEndsAt: null,
+        skipVotes: null,
         members: state.members.map((m) => ({ ...m, side: null, isReady: false })),
       };
 
     case "MY_VOTE":
       return { ...state, myVote: action.side };
+
+    case "FEATURED_SIDE_PICK_STARTED":
+      return { ...state, sidePickEndsAt: action.sidePickEndsAt };
+
+    case "FEATURED_TOPIC_REVEAL":
+      return {
+        ...state,
+        topic: action.topic,
+        sideALabel: action.sideALabel,
+        sideBLabel: action.sideBLabel,
+        status: "lobby",
+        debaterA: null,
+        debaterB: null,
+        phase: null,
+        debateId: null,
+        results: null,
+        myVote: null,
+        countdown: null,
+        sidePickEndsAt: action.sidePickEndsAt,
+        skipVotes: null,
+        disconnectedDebater: null,
+        members: state.members.map((m) => ({ ...m, side: null, isReady: false })),
+        featuredMeta: state.featuredMeta
+          ? { ...state.featuredMeta, currentTopicIndex: action.topicIndex, debatesCompleted: action.debatesCompleted }
+          : state.featuredMeta,
+      };
+
+    case "FEATURED_DEBATER_DISCONNECTED":
+      return { ...state, disconnectedDebater: { userId: action.userId, username: action.username } };
+
+    case "DEBATER_RECONNECTED":
+      return { ...state, disconnectedDebater: null };
+
+    case "FEATURED_DEBATE_CANCELLED":
+      return { ...state, debateCancelled: { reason: action.reason, username: action.username } };
+
+    case "FEATURED_TOPIC_SKIPPED":
+      return state; // Informational — topic reveal follows immediately
+
+    case "FEATURED_DEBATE_COMPLETE":
+      return {
+        ...state,
+        featuredMeta: state.featuredMeta
+          ? { ...state.featuredMeta, debatesCompleted: action.debatesCompleted, maxDebates: action.maxDebates }
+          : state.featuredMeta,
+      };
+
+    case "FEATURED_SKIP_VOTES":
+      return {
+        ...state,
+        skipVotes: { count: action.count, required: action.required, votedUserIds: action.votedUserIds },
+      };
+
+    case "ROOM_CLOSED":
+      return { ...state, closed: true, closedReason: action.reason };
+
+    case "ROOM_CLOSING":
+      return { ...state, closingAt: action.closingAt };
 
     default:
       return state;
@@ -241,6 +351,54 @@ export function useRoom(roomId: string) {
       dispatch({ type: "TOPIC_CHANGE", ...data });
     });
 
+    socket.on("featured:side_pick_started", (data) => {
+      dispatch({ type: "FEATURED_SIDE_PICK_STARTED", ...data });
+    });
+
+    socket.on("featured:debater_disconnected", (data) => {
+      dispatch({ type: "FEATURED_DEBATER_DISCONNECTED", ...data });
+    });
+
+    socket.on("featured:debate_cancelled", (data) => {
+      dispatch({ type: "FEATURED_DEBATE_CANCELLED", ...data });
+    });
+
+    socket.on("debate:debater_disconnected", (data) => {
+      dispatch({ type: "FEATURED_DEBATER_DISCONNECTED", ...data });
+    });
+
+    socket.on("debate:cancelled", (data) => {
+      dispatch({ type: "FEATURED_DEBATE_CANCELLED", ...data });
+    });
+
+    socket.on("debate:debater_reconnected", (data) => {
+      dispatch({ type: "DEBATER_RECONNECTED", ...data });
+    });
+
+    socket.on("featured:topic_reveal", (data) => {
+      dispatch({ type: "FEATURED_TOPIC_REVEAL", ...data });
+    });
+
+    socket.on("featured:topic_skipped", () => {
+      dispatch({ type: "FEATURED_TOPIC_SKIPPED" });
+    });
+
+    socket.on("featured:debate_complete", (data) => {
+      dispatch({ type: "FEATURED_DEBATE_COMPLETE", ...data });
+    });
+
+    socket.on("featured:skip_votes", (data) => {
+      dispatch({ type: "FEATURED_SKIP_VOTES", ...data });
+    });
+
+    socket.on("room:closed", ({ reason }) => {
+      dispatch({ type: "ROOM_CLOSED", reason });
+    });
+
+    socket.on("room:closing", (data) => {
+      dispatch({ type: "ROOM_CLOSING", ...data });
+    });
+
     // Join the room
     socket.emit("room:join", { roomId });
 
@@ -262,6 +420,18 @@ export function useRoom(roomId: string) {
       socket.off("results:final");
       socket.off("chat:message");
       socket.off("topic:change");
+      socket.off("featured:side_pick_started");
+      socket.off("featured:debater_disconnected");
+      socket.off("featured:debate_cancelled");
+      socket.off("debate:debater_disconnected");
+      socket.off("debate:cancelled");
+      socket.off("debate:debater_reconnected");
+      socket.off("featured:topic_reveal");
+      socket.off("featured:topic_skipped");
+      socket.off("featured:debate_complete");
+      socket.off("featured:skip_votes");
+      socket.off("room:closed");
+      socket.off("room:closing");
       if (countdownRef.current) clearInterval(countdownRef.current);
       joinedRef.current = false;
     };
@@ -296,6 +466,11 @@ export function useRoom(roomId: string) {
     [socket]
   );
 
+  const voteSkip = useCallback(
+    () => socket?.emit("featured:vote_skip"),
+    [socket]
+  );
+
   const leaveRoom = useCallback(
     () => socket?.emit("room:leave"),
     [socket]
@@ -303,7 +478,7 @@ export function useRoom(roomId: string) {
 
   return {
     state,
-    actions: { pickSide, unpickSide, setReady, castVote, sendChat, leaveRoom },
+    actions: { pickSide, unpickSide, setReady, castVote, sendChat, voteSkip, leaveRoom },
     isLoading: isLoading && !socketError,
     error: socketError || error,
   };

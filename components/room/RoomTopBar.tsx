@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { RoomStatus } from "@/types/socket";
+import type { RoomStatus, FeaturedMetaBrief } from "@/types/socket";
 
 const STATUS_LABELS: Record<RoomStatus, string> = {
   lobby: "Open Lobby",
@@ -15,10 +15,14 @@ export default function RoomTopBar({
   status,
   memberCount,
   onLeave,
+  isFeatured,
+  featuredMeta,
 }: {
   status: RoomStatus;
   memberCount: number;
   onLeave: () => void;
+  isFeatured?: boolean;
+  featuredMeta?: FeaturedMetaBrief | null;
 }) {
   const [hovered, setHovered] = useState(false);
   const isLive = status === "live" || status === "voting";
@@ -44,8 +48,24 @@ export default function RoomTopBar({
           color: "var(--dim)",
         }}
       >
-        Live Debate Room
+        {isFeatured ? "Featured Room" : "Live Debate Room"}
       </span>
+
+      {isFeatured && featuredMeta && (
+        <span
+          style={{
+            fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+            fontSize: "9px",
+            letterSpacing: "2px",
+            textTransform: "uppercase",
+            color: "var(--g)",
+            background: "var(--g3)",
+            padding: "3px 8px",
+          }}
+        >
+          Debate {featuredMeta.debatesCompleted}/{featuredMeta.maxDebates}
+        </span>
+      )}
 
       <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
         {/* Member count */}

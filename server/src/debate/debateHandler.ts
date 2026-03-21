@@ -1,7 +1,7 @@
 import type { Server } from "socket.io";
 import * as store from "../state/roomStore.js";
 import { supabase } from "../lib/supabase.js";
-import { startDebate, clearRoomTimer } from "./timerService.js";
+import { startDebate, clearRoomTimer, setRoomTimer } from "./timerService.js";
 import { STARTING_COUNTDOWN_MS, SIDE_PICK_TIMEOUT_MS } from "./phaseEngine.js";
 import { clearAllSides } from "../rooms/sidePicker.js";
 import { TOPICS } from "./topics.js";
@@ -67,8 +67,18 @@ export async function beginDebateCountdown(roomId: string, io: Server): Promise<
   const debaterB = members.find((m) => m.side === "b");
   if (!debaterA || !debaterB) return;
 
-  // Insert debate row in Supabase
-  const { data, error } = await supabase
+  // Update room state immediately so UI sees the transition
+  await store.updateRoom(roomId, {
+    debaterAId: debaterA.userId,
+    debaterBId: debaterB.userId,
+    status: "live",
+  });
+
+  // Emit countdown immediately — don't wait for Supabase
+  io.to(roomId).emit("debate:starting", { debateId: "pending", countdown: 5 });
+
+  // Insert debate row in Supabase in parallel with the countdown
+  const insertPromise = supabase
     .from("debates")
     .insert({
       room_code: roomId,
@@ -83,28 +93,21 @@ export async function beginDebateCountdown(roomId: string, io: Server): Promise<
     .select("id")
     .single();
 
-  if (error || !data) {
-    logger.error({ error }, "Failed to create debate record");
-    return;
-  }
-
-  const debateId = data.id;
-
-  await store.updateRoom(roomId, {
-    debaterAId: debaterA.userId,
-    debaterBId: debaterB.userId,
-    debateId,
-    status: "live",
-  });
-
-  // Emit 5s countdown
-  io.to(roomId).emit("debate:starting", { debateId, countdown: 5 });
-
-  // After countdown, start actual debate
+  // After countdown, finalize debate ID and start phases
   clearRoomTimer(roomId);
-  setTimeout(async () => {
+  const countdownTimer = setTimeout(async () => {
+    const { data, error } = await insertPromise;
+
+    if (error || !data) {
+      logger.error({ error }, "Failed to create debate record");
+      return;
+    }
+
+    const debateId = data.id;
+    await store.updateRoom(roomId, { debateId });
     await startDebate(roomId, debateId, io);
   }, STARTING_COUNTDOWN_MS);
+  setRoomTimer(roomId, countdownTimer);
 }
 
 function pickRandomTopic() {

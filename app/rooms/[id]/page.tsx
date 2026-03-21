@@ -25,14 +25,38 @@ export default function RoomPage() {
     });
   }, []);
 
-  // Handle room closed
+  // Handle room closed (error or server-sent close)
   useEffect(() => {
-    // If we got an error about room being closed, redirect
-    if (error === "Room not found" || error === "Room is full") {
+    if (error === "Room not found" || error === "Room is full" || state.closed) {
       const timeout = setTimeout(() => router.push("/rooms"), 2000);
       return () => clearTimeout(timeout);
     }
-  }, [error, router]);
+  }, [error, state.closed, router]);
+
+  // Debate cancelled notice — auto-dismiss after 5s
+  const [cancelNotice, setCancelNotice] = useState<{ reason: string; username: string } | null>(null);
+  useEffect(() => {
+    if (!state.debateCancelled) return;
+    setCancelNotice(state.debateCancelled);
+    const timeout = setTimeout(() => setCancelNotice(null), 5000);
+    return () => clearTimeout(timeout);
+  }, [state.debateCancelled]);
+
+  // Closing countdown for featured rooms
+  const [closingRemaining, setClosingRemaining] = useState<number | null>(null);
+  useEffect(() => {
+    if (!state.closingAt) { setClosingRemaining(null); return; }
+    function tick() {
+      const left = Math.max(0, Math.ceil((state.closingAt! - Date.now()) / 1000));
+      setClosingRemaining(left);
+      if (left <= 0) {
+        router.push("/rooms");
+      }
+    }
+    tick();
+    const id = setInterval(tick, 250);
+    return () => clearInterval(id);
+  }, [state.closingAt, router]);
 
   if (isLoading) {
     return (
@@ -60,6 +84,35 @@ export default function RoomPage() {
             Connecting to room...
           </span>
           <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        </div>
+      </main>
+    );
+  }
+
+  if (state.closed) {
+    return (
+      <main style={{ background: "var(--dark)", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "16px" }}>
+          <span
+            style={{
+              fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+              fontSize: "11px",
+              letterSpacing: "2px",
+              textTransform: "uppercase",
+              color: "var(--red)",
+            }}
+          >
+            {state.closedReason || "Room closed"}
+          </span>
+          <span
+            style={{
+              fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+              fontSize: "10px",
+              color: "var(--dim)",
+            }}
+          >
+            Redirecting...
+          </span>
         </div>
       </main>
     );
@@ -105,7 +158,74 @@ export default function RoomPage() {
         status={state.status}
         memberCount={state.members.length}
         onLeave={handleLeave}
+        isFeatured={state.isFeatured}
+        featuredMeta={state.featuredMeta}
       />
+
+      {/* Debate cancelled notice */}
+      {cancelNotice && (
+        <div
+          style={{
+            background: "rgba(255,45,85,0.08)",
+            borderBottom: "1px solid rgba(255,45,85,0.3)",
+            padding: "14px 32px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "8px",
+          }}
+        >
+          <span
+            style={{
+              fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+              fontSize: "11px",
+              letterSpacing: "1.5px",
+              textTransform: "uppercase",
+              color: "var(--red)",
+              fontWeight: 600,
+            }}
+          >
+            Debate cancelled
+          </span>
+          <span
+            style={{
+              fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+              fontSize: "11px",
+              letterSpacing: "1px",
+              color: "var(--dim)",
+            }}
+          >
+            — {cancelNotice.username} {cancelNotice.reason}
+          </span>
+        </div>
+      )}
+
+      {/* Closing countdown overlay */}
+      {closingRemaining != null && closingRemaining > 0 && (
+        <div
+          style={{
+            background: "rgba(255,45,85,0.08)",
+            borderBottom: "1px solid rgba(255,45,85,0.3)",
+            padding: "12px 32px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "12px",
+          }}
+        >
+          <span
+            style={{
+              fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+              fontSize: "11px",
+              letterSpacing: "2px",
+              textTransform: "uppercase",
+              color: "var(--red)",
+            }}
+          >
+            Room closing in {closingRemaining}s
+          </span>
+        </div>
+      )}
 
       <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
         {/* Main content */}
@@ -147,6 +267,11 @@ export default function RoomPage() {
               onPickSide={actions.pickSide}
               onUnpickSide={actions.unpickSide}
               onReady={actions.setReady}
+              onVoteSkip={actions.voteSkip}
+              isFeatured={state.isFeatured}
+              featuredMeta={state.featuredMeta}
+              sidePickEndsAt={state.sidePickEndsAt}
+              skipVotes={state.skipVotes}
             />
           )}
 
@@ -161,6 +286,7 @@ export default function RoomPage() {
               countdown={state.countdown}
               roomId={roomId}
               currentUserId={currentUserId || null}
+              disconnectedDebater={state.disconnectedDebater}
             />
           )}
 
@@ -180,6 +306,8 @@ export default function RoomPage() {
               results={state.results}
               sideALabel={state.sideALabel}
               sideBLabel={state.sideBLabel}
+              isFeatured={state.isFeatured}
+              featuredMeta={state.featuredMeta}
             />
           )}
         </div>

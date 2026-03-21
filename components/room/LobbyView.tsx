@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import type { RoomMember, Side, UserBrief } from "@/types/socket";
+import { useState, useEffect } from "react";
+import type { RoomMember, Side, UserBrief, FeaturedMetaBrief } from "@/types/socket";
 
 export default function LobbyView({
   topic,
@@ -14,6 +14,11 @@ export default function LobbyView({
   onPickSide,
   onUnpickSide,
   onReady,
+  onVoteSkip,
+  isFeatured,
+  featuredMeta,
+  sidePickEndsAt,
+  skipVotes,
 }: {
   topic: string;
   sideALabel: string;
@@ -25,6 +30,11 @@ export default function LobbyView({
   onPickSide: (side: Side) => void;
   onUnpickSide: () => void;
   onReady: () => void;
+  onVoteSkip: () => void;
+  isFeatured?: boolean;
+  featuredMeta?: FeaturedMetaBrief | null;
+  sidePickEndsAt?: number | null;
+  skipVotes?: { count: number; required: number; votedUserIds: string[] } | null;
 }) {
   const myMember = members.find((m) => m.userId === currentUserId);
   const mySide = myMember?.side ?? null;
@@ -35,33 +45,105 @@ export default function LobbyView({
     (m) => m.userId !== debaterA?.userId && m.userId !== debaterB?.userId
   );
 
+  // Side-pick countdown for featured rooms
+  const [sidePickRemaining, setSidePickRemaining] = useState<number | null>(null);
+  useEffect(() => {
+    if (!sidePickEndsAt) { setSidePickRemaining(null); return; }
+    function tick() {
+      const left = Math.max(0, Math.ceil((sidePickEndsAt! - Date.now()) / 1000));
+      setSidePickRemaining(left);
+    }
+    tick();
+    const id = setInterval(tick, 250);
+    return () => clearInterval(id);
+  }, [sidePickEndsAt]);
+
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "48px 40px" }}>
+      {/* Featured room indicators */}
+      {isFeatured && featuredMeta && (
+        <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "16px" }}>
+          <span
+            style={{
+              fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+              fontSize: "9px",
+              letterSpacing: "2px",
+              textTransform: "uppercase",
+              color: "var(--dim)",
+            }}
+          >
+            Topic {featuredMeta.currentTopicIndex + 1} of {featuredMeta.topicCount}
+          </span>
+          <span
+            style={{
+              fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+              fontSize: "9px",
+              letterSpacing: "2px",
+              textTransform: "uppercase",
+              color: "var(--g)",
+            }}
+          >
+            {featuredMeta.debatesCompleted}/{featuredMeta.maxDebates} Debates
+          </span>
+        </div>
+      )}
+
+      {/* Side-pick countdown */}
+      {isFeatured && sidePickRemaining != null && sidePickRemaining > 0 && (
+        <div
+          style={{
+            fontFamily: "var(--font-display, 'Big Shoulders Display', sans-serif)",
+            fontSize: "clamp(32px, 5vw, 56px)",
+            fontWeight: 900,
+            color: sidePickRemaining <= 10 ? "var(--red)" : "var(--g)",
+            lineHeight: 1,
+            marginBottom: "12px",
+          }}
+        >
+          {sidePickRemaining}s
+        </div>
+      )}
+      {isFeatured && sidePickRemaining != null && sidePickRemaining > 0 && (
+        <div
+          style={{
+            fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+            fontSize: "9px",
+            letterSpacing: "2px",
+            textTransform: "uppercase",
+            color: "var(--dim)",
+            marginBottom: "20px",
+          }}
+        >
+          Pick a side before time runs out
+        </div>
+      )}
+
       {/* Topic */}
       <div
         style={{
-          fontFamily: "var(--font-oswald, 'Oswald', sans-serif)",
-          fontSize: "clamp(28px, 4vw, 48px)",
-          fontWeight: 700,
+          fontFamily: "var(--font-display, 'Big Shoulders Display', sans-serif)",
+          fontSize: "clamp(40px, 6vw, 72px)",
+          fontWeight: 900,
           textTransform: "uppercase",
-          letterSpacing: "-1px",
-          lineHeight: 1.05,
+          letterSpacing: "-2px",
+          lineHeight: 0.92,
           textAlign: "center",
-          maxWidth: "700px",
-          marginBottom: "40px",
+          maxWidth: "800px",
+          marginBottom: "48px",
         }}
       >
         {topic}
       </div>
 
       {/* Side pick buttons */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: "24px", width: "100%", maxWidth: "600px", marginBottom: "40px" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: "28px", width: "100%", maxWidth: "720px", marginBottom: "44px" }}>
         <SideButton
           label={sideALabel}
           sideLabel="Side A"
           color="#3b82f6"
           picked={mySide === "a"}
           takenBy={debaterA}
+          isReady={!!members.find((m) => m.side === "a" && m.isReady)}
           disabled={!!debaterA && debaterA.userId !== currentUserId}
           onClick={() => mySide === "a" ? onUnpickSide() : onPickSide("a")}
         />
@@ -69,11 +151,11 @@ export default function LobbyView({
           style={{
             display: "flex",
             alignItems: "center",
-            fontFamily: "var(--font-oswald, 'Oswald', sans-serif)",
-            fontSize: "16px",
-            fontWeight: 700,
+            fontFamily: "var(--font-display, 'Big Shoulders Display', sans-serif)",
+            fontSize: "28px",
+            fontWeight: 900,
             color: "var(--dim)",
-            letterSpacing: "3px",
+            letterSpacing: "4px",
           }}
         >
           VS
@@ -84,10 +166,20 @@ export default function LobbyView({
           color="#fb923c"
           picked={mySide === "b"}
           takenBy={debaterB}
+          isReady={!!members.find((m) => m.side === "b" && m.isReady)}
           disabled={!!debaterB && debaterB.userId !== currentUserId}
           onClick={() => mySide === "b" ? onUnpickSide() : onPickSide("b")}
         />
       </div>
+
+      {/* Skip topic button (featured rooms only, requires 2 votes) */}
+      {isFeatured && !!sidePickEndsAt && sidePickRemaining != null && sidePickRemaining > 0 && (
+        <SkipTopicButton
+          onVoteSkip={onVoteSkip}
+          skipVotes={skipVotes}
+          currentUserId={currentUserId}
+        />
+      )}
 
       {/* Ready button */}
       {amDebater && !isReady && (
@@ -169,6 +261,7 @@ function SideButton({
   color,
   picked,
   takenBy,
+  isReady,
   disabled,
   onClick,
 }: {
@@ -177,6 +270,7 @@ function SideButton({
   color: string;
   picked: boolean;
   takenBy: UserBrief | null;
+  isReady: boolean;
   disabled: boolean;
   onClick: () => void;
 }) {
@@ -195,21 +289,23 @@ function SideButton({
           ? `${color}0a`
           : "var(--card)",
         border: `1px solid ${picked ? color : "var(--border)"}`,
-        padding: "24px 20px",
+        padding: "40px 28px",
         cursor: disabled ? "default" : "pointer",
         opacity: disabled ? 0.5 : 1,
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        gap: "8px",
+        gap: "10px",
         transition: "all 0.2s",
+        minHeight: "140px",
+        justifyContent: "center",
       }}
     >
       <span
         style={{
           fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
-          fontSize: "8px",
-          letterSpacing: "2px",
+          fontSize: "10px",
+          letterSpacing: "3px",
           textTransform: "uppercase",
           color: color,
           opacity: 0.7,
@@ -219,11 +315,13 @@ function SideButton({
       </span>
       <span
         style={{
-          fontFamily: "var(--font-oswald, 'Oswald', sans-serif)",
-          fontSize: "16px",
-          fontWeight: 700,
+          fontFamily: "var(--font-display, 'Big Shoulders Display', sans-serif)",
+          fontSize: "clamp(24px, 3vw, 36px)",
+          fontWeight: 900,
           color: color,
           textTransform: "uppercase",
+          letterSpacing: "-1px",
+          lineHeight: 1,
         }}
       >
         {label}
@@ -232,14 +330,70 @@ function SideButton({
         <span
           style={{
             fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
-            fontSize: "9px",
+            fontSize: "11px",
             color: "var(--dim)",
             letterSpacing: "1px",
+            marginTop: "4px",
           }}
         >
           {picked ? "You" : takenBy.username}
         </span>
       )}
+      {takenBy && isReady && (
+        <span
+          style={{
+            fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+            fontSize: "9px",
+            letterSpacing: "2px",
+            textTransform: "uppercase",
+            color: "var(--g)",
+            marginTop: "2px",
+          }}
+        >
+          Ready
+        </span>
+      )}
+    </button>
+  );
+}
+
+function SkipTopicButton({
+  onVoteSkip,
+  skipVotes,
+  currentUserId,
+}: {
+  onVoteSkip: () => void;
+  skipVotes?: { count: number; required: number; votedUserIds: string[] } | null;
+  currentUserId: string;
+}) {
+  const [hovered, setHovered] = useState(false);
+  const hasVoted = skipVotes?.votedUserIds.includes(currentUserId) ?? false;
+  const count = skipVotes?.count ?? 0;
+  const required = skipVotes?.required ?? 2;
+
+  return (
+    <button
+      onClick={onVoteSkip}
+      disabled={hasVoted}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        background: hasVoted ? "var(--dark3)" : hovered ? "var(--dark3)" : "transparent",
+        border: `1px solid ${hasVoted ? "var(--dim)" : "var(--border2)"}`,
+        padding: "10px 28px",
+        cursor: hasVoted ? "default" : "pointer",
+        fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+        fontSize: "10px",
+        fontWeight: 600,
+        letterSpacing: "2px",
+        textTransform: "uppercase",
+        color: hasVoted ? "var(--dim)" : hovered ? "var(--text)" : "var(--dim)",
+        marginBottom: "24px",
+        transition: "all 0.2s",
+        opacity: hasVoted ? 0.6 : 1,
+      }}
+    >
+      {hasVoted ? `Voted to skip (${count}/${required})` : `Skip topic (${count}/${required})`}
     </button>
   );
 }

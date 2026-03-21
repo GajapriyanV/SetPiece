@@ -25,7 +25,16 @@
       "Bash(sleep:*)",
       "Bash(curl:*)",
       "Bash(netstat:*)",
-      "Bash(taskkill:*)"
+      "Bash(taskkill:*)",
+      "Bash(npx tsx:*)",
+      "Bash(npx --prefix C:/Users/gajap/Desktop/SetPiece/server kill-port 3001)",
+      "Bash(lsof -ti:3001)",
+      "Bash(xargs kill:*)",
+      "Bash(npx tsc:*)",
+      "Bash(while read:*)",
+      "Bash(do taskkill:*)",
+      "Bash(done)",
+      "Bash(ls -la /c/Users/gajap/Desktop/SetPiece/*.example)"
     ]
   }
 }

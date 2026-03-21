@@ -2,16 +2,20 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import type { ResultsData } from "@/types/socket";
+import type { ResultsData, FeaturedMetaBrief } from "@/types/socket";
 
 export default function ResultsView({
   results,
   sideALabel,
   sideBLabel,
+  isFeatured,
+  featuredMeta,
 }: {
   results: ResultsData;
   sideALabel: string;
   sideBLabel: string;
+  isFeatured?: boolean;
+  featuredMeta?: FeaturedMetaBrief | null;
 }) {
   const [hovered, setHovered] = useState(false);
   const total = results.votesA + results.votesB;
@@ -120,26 +124,54 @@ export default function ResultsView({
         />
       </div>
 
-      {/* Back to rooms */}
-      <Link
-        href="/rooms"
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-        style={{
-          textDecoration: "none",
-          background: hovered ? "var(--g2)" : "var(--g)",
-          padding: "14px 36px",
-          fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
-          fontSize: "11px",
-          fontWeight: 700,
-          letterSpacing: "3px",
-          textTransform: "uppercase",
-          color: "var(--dark)",
-          transition: "background 0.2s",
-        }}
-      >
-        Back to Rooms
-      </Link>
+      {/* Back to rooms / next debate */}
+      {isFeatured && featuredMeta ? (
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
+          <div
+            style={{
+              fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+              fontSize: "11px",
+              letterSpacing: "2px",
+              textTransform: "uppercase",
+              color: "var(--g)",
+            }}
+          >
+            {featuredMeta.debatesCompleted >= featuredMeta.maxDebates
+              ? "All debates complete — room closing..."
+              : "Next debate starting soon..."}
+          </div>
+          <div
+            style={{
+              fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+              fontSize: "9px",
+              letterSpacing: "1.5px",
+              color: "var(--dim)",
+            }}
+          >
+            Debate {featuredMeta.debatesCompleted} of {featuredMeta.maxDebates}
+          </div>
+        </div>
+      ) : (
+        <Link
+          href="/rooms"
+          onMouseEnter={() => setHovered(true)}
+          onMouseLeave={() => setHovered(false)}
+          style={{
+            textDecoration: "none",
+            background: hovered ? "var(--g2)" : "var(--g)",
+            padding: "14px 36px",
+            fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+            fontSize: "11px",
+            fontWeight: 700,
+            letterSpacing: "3px",
+            textTransform: "uppercase",
+            color: "var(--dark)",
+            transition: "background 0.2s",
+          }}
+        >
+          Back to Rooms
+        </Link>
+      )}
     </div>
   );
 }

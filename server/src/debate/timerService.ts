@@ -10,6 +10,9 @@ import {
 } from "./phaseEngine.js";
 import { tallyAndPersist } from "../voting/voteTally.js";
 import { setCanPublish, closeLiveKitRoom } from "../livekit/livekitService.js";
+import { handleDebateComplete } from "../rooms/featuredRoomManager.js";
+import { clearAllSides } from "../rooms/sidePicker.js";
+import { startEmptyRoomTimer } from "../rooms/roomManager.js";
 import { logger } from "../utils/logger.js";
 
 // Active timers per room
@@ -21,6 +24,10 @@ export function clearRoomTimer(roomId: string): void {
     clearTimeout(existing);
     timers.delete(roomId);
   }
+}
+
+export function setRoomTimer(roomId: string, timer: NodeJS.Timeout): void {
+  timers.set(roomId, timer);
 }
 
 export async function startDebate(roomId: string, debateId: string, io: Server): Promise<void> {
@@ -134,14 +141,37 @@ async function finishDebate(roomId: string, io: Server): Promise<void> {
     logger.error({ roomId, err }, "Failed to tally and persist results");
   }
 
-  // Auto-close room after results display
+  // After results display: close regular rooms, cycle featured rooms
   clearRoomTimer(roomId);
   const timer = setTimeout(async () => {
     timers.delete(roomId);
-    io.to(roomId).emit("room:closed", { reason: "Debate complete" });
-    await store.deleteRoom(roomId);
-    await closeLiveKitRoom(roomId);
-    logger.info({ roomId }, "Room closed after results");
+
+    if (room.isFeatured) {
+      await handleDebateComplete(roomId, io);
+    } else {
+      await closeLiveKitRoom(roomId);
+
+      // Normal room: reset to lobby instead of closing
+      const members = await store.getMembers(roomId);
+      if (members.length === 0) {
+        startEmptyRoomTimer(roomId);
+      } else {
+        await store.updateRoom(roomId, {
+          status: "lobby",
+          debaterAId: null,
+          debaterBId: null,
+          debateId: null,
+        });
+        await clearAllSides(roomId, io);
+        await store.clearPhase(roomId);
+        io.to(roomId).emit("topic:change", {
+          topic: room.topic,
+          sideALabel: room.sideALabel,
+          sideBLabel: room.sideBLabel,
+        });
+        logger.info({ roomId }, "Debate complete, room reset to lobby");
+      }
+    }
   }, RESULTS_DISPLAY_MS);
 
   timers.set(roomId, timer);

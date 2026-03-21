@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import CreateRoomModal from "@/components/room/CreateRoomModal";
+import CreateFeaturedRoomModal from "@/components/room/CreateFeaturedRoomModal";
 
 const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3001";
 
@@ -13,6 +14,9 @@ interface RoomListItem {
   sideBLabel: string;
   status: string;
   memberCount: number;
+  isFeatured?: boolean;
+  debatesCompleted?: number;
+  maxDebates?: number;
 }
 
 function RoomRow({ room }: { room: RoomListItem }) {
@@ -65,6 +69,22 @@ function RoomRow({ room }: { room: RoomListItem }) {
           />
           {isLive ? "Live Now" : isOpen ? "Open" : room.status}
         </div>
+        {room.isFeatured && (
+          <span
+            style={{
+              fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+              fontSize: "8px",
+              letterSpacing: "2px",
+              textTransform: "uppercase",
+              color: "var(--g)",
+              background: "var(--g3)",
+              padding: "2px 6px",
+              display: "inline-block",
+            }}
+          >
+            Featured {room.debatesCompleted != null ? `${room.debatesCompleted}/${room.maxDebates}` : ""}
+          </span>
+        )}
         <span
           style={{
             fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
@@ -186,7 +206,9 @@ export default function RoomsPage() {
   const [rooms, setRooms] = useState<RoomListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
+  const [showFeaturedCreate, setShowFeaturedCreate] = useState(false);
   const [createHovered, setCreateHovered] = useState(false);
+  const [featuredHovered, setFeaturedHovered] = useState(false);
 
   // Fetch rooms on mount + polling
   useEffect(() => {
@@ -263,6 +285,28 @@ export default function RoomsPage() {
                 ))}
               </div>
 
+              {/* Featured room button */}
+              <button
+                onClick={() => setShowFeaturedCreate(true)}
+                onMouseEnter={() => setFeaturedHovered(true)}
+                onMouseLeave={() => setFeaturedHovered(false)}
+                style={{
+                  background: "transparent",
+                  border: `1px solid ${featuredHovered ? "var(--g)" : "var(--border)"}`,
+                  padding: "10px 20px",
+                  cursor: "pointer",
+                  fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+                  fontSize: "10px",
+                  fontWeight: 700,
+                  letterSpacing: "2px",
+                  textTransform: "uppercase",
+                  color: featuredHovered ? "var(--g)" : "var(--dim)",
+                  transition: "all 0.2s",
+                }}
+              >
+                Featured Room
+              </button>
+
               {/* Create room button */}
               <button
                 onClick={() => setShowCreate(true)}
@@ -335,6 +379,7 @@ export default function RoomsPage() {
       </div>
 
       {showCreate && <CreateRoomModal onClose={() => setShowCreate(false)} />}
+      {showFeaturedCreate && <CreateFeaturedRoomModal onClose={() => setShowFeaturedCreate(false)} />}
     </main>
   );
 }

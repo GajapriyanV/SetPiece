@@ -1,5 +1,5 @@
 import { redis } from "../lib/redis.js";
-import type { RoomState, RoomMember, PhaseState, ChatMessage } from "../types/room.js";
+import type { RoomState, RoomMember, PhaseState, ChatMessage, FeaturedRoomMeta } from "../types/room.js";
 
 const TTL = 7200; // 2 hours
 
@@ -27,6 +27,7 @@ export async function getRoom(roomId: string): Promise<RoomState | null> {
     debaterBId: data.debaterBId || null,
     debateId: data.debateId || null,
     createdAt: parseInt(data.createdAt, 10),
+    isFeatured: String(data.isFeatured) === "true",
   };
 }
 
@@ -35,7 +36,7 @@ export async function updateRoom(roomId: string, fields: Partial<RoomState>): Pr
 }
 
 export async function deleteRoom(roomId: string): Promise<void> {
-  const keys = ["state", "members", "phase", "chat", "votes", "vote_counts"];
+  const keys = ["state", "members", "phase", "chat", "votes", "vote_counts", "featured", "skip_votes"];
   await Promise.all(keys.map((k) => redis.del(roomKey(roomId, k))));
   await redis.srem("sp:rooms:active", roomId);
 }
@@ -113,4 +114,63 @@ export async function addChatMessage(roomId: string, message: ChatMessage): Prom
 export async function getChatHistory(roomId: string, limit = 50): Promise<ChatMessage[]> {
   const raw = await redis.lrange(roomKey(roomId, "chat"), 0, limit - 1);
   return raw.map((v) => (typeof v === "string" ? JSON.parse(v) : v) as ChatMessage).reverse();
+}
+
+// ── Featured Room Meta ──
+
+export async function setFeaturedMeta(roomId: string, meta: FeaturedRoomMeta): Promise<void> {
+  await redis.hset(roomKey(roomId, "featured"), {
+    topicQueue: JSON.stringify(meta.topicQueue),
+    currentTopicIndex: meta.currentTopicIndex.toString(),
+    debatesCompleted: meta.debatesCompleted.toString(),
+    maxDebates: meta.maxDebates.toString(),
+    lastActivityAt: meta.lastActivityAt.toString(),
+    closingAt: meta.closingAt?.toString() ?? "",
+  });
+  await redis.expire(roomKey(roomId, "featured"), TTL);
+}
+
+export async function getFeaturedMeta(roomId: string): Promise<FeaturedRoomMeta | null> {
+  const data = await redis.hgetall<Record<string, string>>(roomKey(roomId, "featured"));
+  if (!data || Object.keys(data).length === 0) return null;
+  const rawQueue = data.topicQueue;
+  return {
+    topicQueue: typeof rawQueue === "string" ? JSON.parse(rawQueue) : rawQueue,
+    currentTopicIndex: parseInt(data.currentTopicIndex, 10),
+    debatesCompleted: parseInt(data.debatesCompleted, 10),
+    maxDebates: parseInt(data.maxDebates, 10),
+    lastActivityAt: parseInt(data.lastActivityAt, 10),
+    closingAt: data.closingAt ? parseInt(data.closingAt, 10) : null,
+  };
+}
+
+export async function updateFeaturedMeta(roomId: string, fields: Partial<FeaturedRoomMeta>): Promise<void> {
+  const update: Record<string, string> = {};
+  if (fields.topicQueue !== undefined) update.topicQueue = JSON.stringify(fields.topicQueue);
+  if (fields.currentTopicIndex !== undefined) update.currentTopicIndex = fields.currentTopicIndex.toString();
+  if (fields.debatesCompleted !== undefined) update.debatesCompleted = fields.debatesCompleted.toString();
+  if (fields.maxDebates !== undefined) update.maxDebates = fields.maxDebates.toString();
+  if (fields.lastActivityAt !== undefined) update.lastActivityAt = fields.lastActivityAt.toString();
+  if (fields.closingAt !== undefined) update.closingAt = fields.closingAt?.toString() ?? "";
+  await redis.hset(roomKey(roomId, "featured"), update);
+}
+
+// ── Skip Votes ──
+
+export async function addSkipVote(roomId: string, userId: string): Promise<number> {
+  await redis.sadd(roomKey(roomId, "skip_votes"), userId);
+  await redis.expire(roomKey(roomId, "skip_votes"), TTL);
+  return await redis.scard(roomKey(roomId, "skip_votes"));
+}
+
+export async function getSkipVotes(roomId: string): Promise<string[]> {
+  return (await redis.smembers(roomKey(roomId, "skip_votes"))) as string[];
+}
+
+export async function getSkipVoteCount(roomId: string): Promise<number> {
+  return await redis.scard(roomKey(roomId, "skip_votes"));
+}
+
+export async function clearSkipVotes(roomId: string): Promise<void> {
+  await redis.del(roomKey(roomId, "skip_votes"));
 }

@@ -29,6 +29,16 @@ export interface RoomState {
   debaterBId: string | null;
   debateId: string | null;
   createdAt: number;
+  isFeatured: boolean;
+}
+
+export interface FeaturedRoomMeta {
+  topicQueue: { topic: string; sideALabel: string; sideBLabel: string }[];
+  currentTopicIndex: number;
+  debatesCompleted: number;
+  maxDebates: number;
+  lastActivityAt: number;
+  closingAt: number | null;
 }
 
 export interface PhaseState {
@@ -52,6 +62,14 @@ export interface UserBrief {
   avatarUrl: string | null;
 }
 
+export interface FeaturedMetaBrief {
+  currentTopicIndex: number;
+  debatesCompleted: number;
+  maxDebates: number;
+  topicCount: number;
+  closingAt: number | null;
+}
+
 export interface FullRoomState {
   roomId: string;
   status: RoomStatus;
@@ -65,4 +83,6 @@ export interface FullRoomState {
   chat: ChatMessage[];
   debateId: string | null;
   votes: { a: number; b: number } | null;
+  isFeatured: boolean;
+  featuredMeta: FeaturedMetaBrief | null;
 }

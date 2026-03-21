@@ -60,6 +60,7 @@ function DebaterCard({
   avatarColor,
   active,
   speaking,
+  disconnected,
 }: {
   name: string;
   stance: string;
@@ -67,12 +68,17 @@ function DebaterCard({
   avatarColor: string;
   active: boolean;
   speaking: boolean;
+  disconnected: boolean;
 }) {
   return (
     <div
       style={{
-        background: active ? "rgba(0,255,135,0.04)" : "var(--card)",
-        border: `1px solid ${active ? "var(--g)" : "var(--border)"}`,
+        background: disconnected
+          ? "rgba(245,158,11,0.06)"
+          : active
+          ? "rgba(0,255,135,0.04)"
+          : "var(--card)",
+        border: `1px solid ${disconnected ? "#f59e0b" : active ? "var(--g)" : "var(--border)"}`,
         borderRadius: "4px",
         padding: "32px 24px",
         display: "flex",
@@ -80,6 +86,7 @@ function DebaterCard({
         alignItems: "center",
         gap: "12px",
         transition: "border-color 0.3s",
+        opacity: disconnected ? 0.7 : 1,
       }}
     >
       <div
@@ -87,7 +94,7 @@ function DebaterCard({
           width: "56px",
           height: "56px",
           borderRadius: "50%",
-          background: avatarColor,
+          background: disconnected ? "#f59e0b" : avatarColor,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -95,6 +102,7 @@ function DebaterCard({
           fontSize: "22px",
           fontWeight: 700,
           color: "#fff",
+          transition: "background 0.3s",
         }}
       >
         {avatar}
@@ -105,27 +113,41 @@ function DebaterCard({
           fontFamily: "var(--font-body, 'Familjen Grotesk', sans-serif)",
           fontSize: "15px",
           fontWeight: 600,
-          color: "var(--text)",
+          color: disconnected ? "#f59e0b" : "var(--text)",
           textAlign: "center",
         }}
       >
         {name}
       </div>
 
-      <div
-        style={{
-          fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
-          fontSize: "9px",
-          letterSpacing: "2px",
-          textTransform: "uppercase",
-          color: active ? "var(--g)" : "var(--dim)",
-        }}
-      >
-        For {stance}
-      </div>
+      {disconnected ? (
+        <div
+          style={{
+            fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+            fontSize: "9px",
+            letterSpacing: "2px",
+            textTransform: "uppercase",
+            color: "#f59e0b",
+          }}
+        >
+          Reconnecting...
+        </div>
+      ) : (
+        <div
+          style={{
+            fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+            fontSize: "9px",
+            letterSpacing: "2px",
+            textTransform: "uppercase",
+            color: active ? "var(--g)" : "var(--dim)",
+          }}
+        >
+          For {stance}
+        </div>
+      )}
 
       <div style={{ height: "24px", display: "flex", alignItems: "center" }}>
-        {speaking ? <WaveformBars /> : <InactiveDots />}
+        {disconnected ? null : speaking ? <WaveformBars /> : <InactiveDots />}
       </div>
     </div>
   );
@@ -141,6 +163,7 @@ export default function LiveView({
   countdown,
   roomId,
   currentUserId,
+  disconnectedDebater,
 }: {
   phase: PhaseState | null;
   debaterA: UserBrief | null;
@@ -151,6 +174,7 @@ export default function LiveView({
   countdown: number | null;
   roomId: string;
   currentUserId: string | null;
+  disconnectedDebater?: { userId: string; username: string } | null;
 }) {
   const secondsLeft = useServerTimer(phase?.endsAt ?? null);
   const { isSpeaking, canPublish, micEnabled, isReconnecting, needsAudioUnlock, toggleMic, unlockAudio } = useLiveKit(roomId);
@@ -340,6 +364,7 @@ export default function LiveView({
           avatarColor="#3b82f6"
           active={activeSide === "a"}
           speaking={debaterA ? !!isSpeaking[debaterA.userId] : false}
+          disconnected={!!disconnectedDebater && disconnectedDebater.userId === debaterA?.userId}
         />
         <div
           style={{
@@ -362,6 +387,7 @@ export default function LiveView({
           avatarColor="#fb923c"
           active={activeSide === "b"}
           speaking={debaterB ? !!isSpeaking[debaterB.userId] : false}
+          disconnected={!!disconnectedDebater && disconnectedDebater.userId === debaterB?.userId}
         />
       </div>
 

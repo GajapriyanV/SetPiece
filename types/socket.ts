@@ -41,6 +41,14 @@ export interface ChatMessage {
   createdAt: string;
 }
 
+export interface FeaturedMetaBrief {
+  currentTopicIndex: number;
+  debatesCompleted: number;
+  maxDebates: number;
+  topicCount: number;
+  closingAt: number | null;
+}
+
 export interface FullRoomState {
   roomId: string;
   status: RoomStatus;
@@ -54,6 +62,8 @@ export interface FullRoomState {
   chat: ChatMessage[];
   debateId: string | null;
   votes: { a: number; b: number } | null;
+  isFeatured: boolean;
+  featuredMeta: FeaturedMetaBrief | null;
 }
 
 export interface ResultsData {
@@ -77,6 +87,8 @@ export interface ClientToServerEvents {
   "side:ready": () => void;
   "chat:send": (data: { body: string }) => void;
   "vote:cast": (data: { side: Side }) => void;
+  "room:create_featured": (data: { topics: { topic: string; sideALabel: string; sideBLabel: string }[] }) => void;
+  "featured:vote_skip": () => void;
 }
 
 export interface ServerToClientEvents {
@@ -98,4 +110,15 @@ export interface ServerToClientEvents {
   "results:final": (data: ResultsData) => void;
   "chat:message": (data: ChatMessage) => void;
   "topic:change": (data: { topic: string; sideALabel: string; sideBLabel: string }) => void;
+  "debate:cancelled": (data: { reason: string; username: string }) => void;
+  "debate:debater_disconnected": (data: { userId: string; username: string }) => void;
+  "debate:debater_reconnected": (data: { userId: string; username: string }) => void;
+  "featured:topic_reveal": (data: { topic: string; sideALabel: string; sideBLabel: string; topicIndex: number; debatesCompleted: number; sidePickEndsAt: number }) => void;
+  "featured:topic_skipped": (data: { reason: string }) => void;
+  "featured:debate_complete": (data: { debatesCompleted: number; maxDebates: number }) => void;
+  "featured:side_pick_started": (data: { sidePickEndsAt: number }) => void;
+  "featured:debater_disconnected": (data: { userId: string; username: string }) => void;
+  "featured:debate_cancelled": (data: { reason: string; username: string }) => void;
+  "featured:skip_votes": (data: { count: number; required: number; votedUserIds: string[] }) => void;
+  "room:closing": (data: { reason: string; closingAt: number }) => void;
 }

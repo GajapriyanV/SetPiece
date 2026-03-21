@@ -74,7 +74,7 @@ export async function clearAllSides(roomId: string, io: Server): Promise<void> {
   await broadcastSides(roomId, io);
 }
 
-async function broadcastSides(roomId: string, io: Server): Promise<void> {
+export async function broadcastSides(roomId: string, io: Server): Promise<void> {
   const members = await store.getMembers(roomId);
 
   const toUserBrief = (m: RoomMember): UserBrief => ({

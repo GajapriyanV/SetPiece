@@ -33,6 +33,7 @@ app.get("/api/rooms", async (_req, res) => {
         const room = await roomStore.getRoom(id);
         const memberCount = await roomStore.getMemberCount(id);
         if (!room) return null;
+        const featuredMeta = room.isFeatured ? await roomStore.getFeaturedMeta(id) : null;
         return {
           roomId: id,
           topic: room.topic,
@@ -40,6 +41,9 @@ app.get("/api/rooms", async (_req, res) => {
           sideBLabel: room.sideBLabel,
           status: room.status,
           memberCount,
+          isFeatured: room.isFeatured,
+          debatesCompleted: featuredMeta?.debatesCompleted ?? undefined,
+          maxDebates: featuredMeta?.maxDebates ?? undefined,
         };
       })
     );

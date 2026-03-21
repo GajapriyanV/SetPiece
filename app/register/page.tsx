@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import SearchableSelect from "@/components/ui/SearchableSelect";
@@ -73,6 +73,14 @@ function getPasswordErrors(pw: string): string[] {
 }
 
 export default function RegisterPage() {
+  return (
+    <Suspense>
+      <RegisterContent />
+    </Suspense>
+  );
+}
+
+function RegisterContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   // complete=1 → user is already authenticated (OAuth or returning email user), just needs profile

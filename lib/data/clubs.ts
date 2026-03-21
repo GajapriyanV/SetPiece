@@ -1,0 +1,162 @@
+// Structured by league — add new leagues/clubs here as needed
+
+export interface ClubEntry {
+  name: string;
+  league: string;
+}
+
+const PREMIER_LEAGUE: ClubEntry[] = [
+  { name: "Arsenal",           league: "Premier League" },
+  { name: "Aston Villa",       league: "Premier League" },
+  { name: "Bournemouth",       league: "Premier League" },
+  { name: "Brentford",         league: "Premier League" },
+  { name: "Brighton",          league: "Premier League" },
+  { name: "Chelsea",           league: "Premier League" },
+  { name: "Crystal Palace",    league: "Premier League" },
+  { name: "Everton",           league: "Premier League" },
+  { name: "Fulham",            league: "Premier League" },
+  { name: "Ipswich Town",      league: "Premier League" },
+  { name: "Leicester City",    league: "Premier League" },
+  { name: "Liverpool",         league: "Premier League" },
+  { name: "Manchester City",   league: "Premier League" },
+  { name: "Manchester United", league: "Premier League" },
+  { name: "Newcastle United",  league: "Premier League" },
+  { name: "Nottingham Forest", league: "Premier League" },
+  { name: "Southampton",       league: "Premier League" },
+  { name: "Tottenham Hotspur", league: "Premier League" },
+  { name: "West Ham United",   league: "Premier League" },
+  { name: "Wolverhampton",     league: "Premier League" },
+];
+
+const LA_LIGA: ClubEntry[] = [
+  { name: "Athletic Club",     league: "La Liga" },
+  { name: "Atletico Madrid",   league: "La Liga" },
+  { name: "Barcelona",         league: "La Liga" },
+  { name: "Betis",             league: "La Liga" },
+  { name: "Celta Vigo",        league: "La Liga" },
+  { name: "Deportivo Alaves",  league: "La Liga" },
+  { name: "Espanyol",          league: "La Liga" },
+  { name: "Getafe",            league: "La Liga" },
+  { name: "Girona",            league: "La Liga" },
+  { name: "Las Palmas",        league: "La Liga" },
+  { name: "Leganes",           league: "La Liga" },
+  { name: "Mallorca",          league: "La Liga" },
+  { name: "Osasuna",           league: "La Liga" },
+  { name: "Rayo Vallecano",    league: "La Liga" },
+  { name: "Real Madrid",       league: "La Liga" },
+  { name: "Real Sociedad",     league: "La Liga" },
+  { name: "Real Valladolid",   league: "La Liga" },
+  { name: "Sevilla",           league: "La Liga" },
+  { name: "Valencia",          league: "La Liga" },
+  { name: "Villarreal",        league: "La Liga" },
+];
+
+const BUNDESLIGA: ClubEntry[] = [
+  { name: "Augsburg",            league: "Bundesliga" },
+  { name: "Bayer Leverkusen",    league: "Bundesliga" },
+  { name: "Bayern Munich",       league: "Bundesliga" },
+  { name: "Borussia Dortmund",   league: "Bundesliga" },
+  { name: "Borussia Monchengladbach", league: "Bundesliga" },
+  { name: "Bochum",              league: "Bundesliga" },
+  { name: "Eintracht Frankfurt", league: "Bundesliga" },
+  { name: "Freiburg",            league: "Bundesliga" },
+  { name: "Hamburg",             league: "Bundesliga" },
+  { name: "Heidenheim",          league: "Bundesliga" },
+  { name: "Hoffenheim",          league: "Bundesliga" },
+  { name: "Holstein Kiel",       league: "Bundesliga" },
+  { name: "Mainz",               league: "Bundesliga" },
+  { name: "RB Leipzig",          league: "Bundesliga" },
+  { name: "St. Pauli",           league: "Bundesliga" },
+  { name: "Union Berlin",        league: "Bundesliga" },
+  { name: "VfB Stuttgart",       league: "Bundesliga" },
+  { name: "Werder Bremen",       league: "Bundesliga" },
+];
+
+const SERIE_A: ClubEntry[] = [
+  { name: "AC Milan",        league: "Serie A" },
+  { name: "Atalanta",        league: "Serie A" },
+  { name: "Bologna",         league: "Serie A" },
+  { name: "Cagliari",        league: "Serie A" },
+  { name: "Como",            league: "Serie A" },
+  { name: "Empoli",          league: "Serie A" },
+  { name: "Fiorentina",      league: "Serie A" },
+  { name: "Genoa",           league: "Serie A" },
+  { name: "Hellas Verona",   league: "Serie A" },
+  { name: "Inter Milan",     league: "Serie A" },
+  { name: "Juventus",        league: "Serie A" },
+  { name: "Lazio",           league: "Serie A" },
+  { name: "Lecce",           league: "Serie A" },
+  { name: "Monza",           league: "Serie A" },
+  { name: "Napoli",          league: "Serie A" },
+  { name: "Parma",           league: "Serie A" },
+  { name: "Roma",            league: "Serie A" },
+  { name: "Torino",          league: "Serie A" },
+  { name: "Udinese",         league: "Serie A" },
+  { name: "Venezia",         league: "Serie A" },
+];
+
+const LIGUE_1: ClubEntry[] = [
+  { name: "Angers",           league: "Ligue 1" },
+  { name: "Auxerre",          league: "Ligue 1" },
+  { name: "Brest",            league: "Ligue 1" },
+  { name: "Le Havre",         league: "Ligue 1" },
+  { name: "Lens",             league: "Ligue 1" },
+  { name: "Lille",            league: "Ligue 1" },
+  { name: "Lyon",             league: "Ligue 1" },
+  { name: "Marseille",        league: "Ligue 1" },
+  { name: "Monaco",           league: "Ligue 1" },
+  { name: "Montpellier",      league: "Ligue 1" },
+  { name: "Nantes",           league: "Ligue 1" },
+  { name: "Nice",             league: "Ligue 1" },
+  { name: "Paris Saint-Germain", league: "Ligue 1" },
+  { name: "Reims",            league: "Ligue 1" },
+  { name: "Rennes",           league: "Ligue 1" },
+  { name: "Saint-Etienne",    league: "Ligue 1" },
+  { name: "Strasbourg",       league: "Ligue 1" },
+  { name: "Toulouse",         league: "Ligue 1" },
+];
+
+const MLS: ClubEntry[] = [
+  { name: "Atlanta United",         league: "MLS" },
+  { name: "Austin FC",              league: "MLS" },
+  { name: "Charlotte FC",           league: "MLS" },
+  { name: "Chicago Fire",           league: "MLS" },
+  { name: "FC Cincinnati",          league: "MLS" },
+  { name: "Colorado Rapids",        league: "MLS" },
+  { name: "Columbus Crew",          league: "MLS" },
+  { name: "D.C. United",            league: "MLS" },
+  { name: "FC Dallas",              league: "MLS" },
+  { name: "Houston Dynamo",         league: "MLS" },
+  { name: "Inter Miami",            league: "MLS" },
+  { name: "LA Galaxy",              league: "MLS" },
+  { name: "LAFC",                   league: "MLS" },
+  { name: "Minnesota United",       league: "MLS" },
+  { name: "CF Montréal",            league: "MLS" },
+  { name: "Nashville SC",           league: "MLS" },
+  { name: "New England Revolution", league: "MLS" },
+  { name: "New York City FC",       league: "MLS" },
+  { name: "New York Red Bulls",     league: "MLS" },
+  { name: "Orlando City",           league: "MLS" },
+  { name: "Philadelphia Union",     league: "MLS" },
+  { name: "Portland Timbers",       league: "MLS" },
+  { name: "Real Salt Lake",         league: "MLS" },
+  { name: "San Jose Earthquakes",   league: "MLS" },
+  { name: "Seattle Sounders",       league: "MLS" },
+  { name: "Sporting Kansas City",   league: "MLS" },
+  { name: "St. Louis City",         league: "MLS" },
+  { name: "Toronto FC",             league: "MLS" },
+  { name: "Vancouver Whitecaps",    league: "MLS" },
+];
+
+// All clubs flattened — sorted alphabetically within each league block
+export const ALL_CLUBS: ClubEntry[] = [
+  ...PREMIER_LEAGUE,
+  ...LA_LIGA,
+  ...BUNDESLIGA,
+  ...SERIE_A,
+  ...LIGUE_1,
+  ...MLS,
+];
+
+// Just the names for validation
+export const CLUB_NAMES: string[] = ALL_CLUBS.map((c) => c.name);

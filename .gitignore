@@ -2,6 +2,11 @@
 
 # dependencies
 node_modules
+/node_modules
+server/node_modules
+
+# local Claude Code config
+.claude/
 /.pnp
 .pnp.*
 .yarn/*

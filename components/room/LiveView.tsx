@@ -363,7 +363,7 @@ export default function LiveView({
           avatar={(debaterA?.username ?? "?")[0].toUpperCase()}
           avatarColor="#3b82f6"
           active={activeSide === "a"}
-          speaking={debaterA ? !!isSpeaking[debaterA.userId] : false}
+          speaking={activeSide === "a" && debaterA ? !!isSpeaking[debaterA.userId] : false}
           disconnected={!!disconnectedDebater && disconnectedDebater.userId === debaterA?.userId}
         />
         <div
@@ -386,7 +386,7 @@ export default function LiveView({
           avatar={(debaterB?.username ?? "?")[0].toUpperCase()}
           avatarColor="#fb923c"
           active={activeSide === "b"}
-          speaking={debaterB ? !!isSpeaking[debaterB.userId] : false}
+          speaking={activeSide === "b" && debaterB ? !!isSpeaking[debaterB.userId] : false}
           disconnected={!!disconnectedDebater && disconnectedDebater.userId === debaterB?.userId}
         />
       </div>

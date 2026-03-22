@@ -29,7 +29,7 @@ export async function handleChatSend(
   const now = Date.now();
   const last = lastMessageTime.get(socket.data.userId);
   if (last && now - last < MIN_INTERVAL_MS) {
-    return emitError(socket, "RATE_LIMIT", "Slow down — 1 message per second");
+    return;
   }
   lastMessageTime.set(socket.data.userId, now);
 

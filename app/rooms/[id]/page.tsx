@@ -298,6 +298,7 @@ export default function RoomPage() {
               voteWindowEndsAt={state.voteWindowEndsAt}
               myVote={state.myVote}
               onVote={actions.castVote}
+              isDebater={currentUserId === state.debaterAId || currentUserId === state.debaterBId}
             />
           )}
 

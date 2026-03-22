@@ -11,6 +11,7 @@ export default function VotingView({
   voteWindowEndsAt,
   myVote,
   onVote,
+  isDebater = false,
 }: {
   sideALabel: string;
   sideBLabel: string;
@@ -18,6 +19,7 @@ export default function VotingView({
   voteWindowEndsAt: number | null;
   myVote: Side | null;
   onVote: (side: Side) => void;
+  isDebater?: boolean;
 }) {
   const secondsLeft = useServerTimer(voteWindowEndsAt);
   const total = (votes?.a ?? 0) + (votes?.b ?? 0);
@@ -54,25 +56,40 @@ export default function VotingView({
         0:{String(secondsLeft).padStart(2, "0")}
       </div>
 
-      {/* Vote buttons */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", width: "100%", maxWidth: "500px", marginBottom: "36px" }}>
-        <VoteButton
-          label={sideALabel}
-          sideLabel="Side A"
-          color="#3b82f6"
-          selected={myVote === "a"}
-          disabled={myVote !== null}
-          onClick={() => onVote("a")}
-        />
-        <VoteButton
-          label={sideBLabel}
-          sideLabel="Side B"
-          color="#fb923c"
-          selected={myVote === "b"}
-          disabled={myVote !== null}
-          onClick={() => onVote("b")}
-        />
-      </div>
+      {/* Vote buttons — hidden for debaters */}
+      {isDebater ? (
+        <div
+          style={{
+            fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+            fontSize: "10px",
+            letterSpacing: "2px",
+            textTransform: "uppercase",
+            color: "var(--dim)",
+            marginBottom: "36px",
+          }}
+        >
+          Waiting for votes
+        </div>
+      ) : (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", width: "100%", maxWidth: "500px", marginBottom: "36px" }}>
+          <VoteButton
+            label={sideALabel}
+            sideLabel="Side A"
+            color="#3b82f6"
+            selected={myVote === "a"}
+            disabled={myVote !== null}
+            onClick={() => onVote("a")}
+          />
+          <VoteButton
+            label={sideBLabel}
+            sideLabel="Side B"
+            color="#fb923c"
+            selected={myVote === "b"}
+            disabled={myVote !== null}
+            onClick={() => onVote("b")}
+          />
+        </div>
+      )}
 
       {/* Vote bar */}
       <div style={{ width: "100%", maxWidth: "500px" }}>

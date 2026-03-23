@@ -107,15 +107,26 @@ export default function TopNav() {
         }}
       >
         {[
-          { label: "Debates",  href: "/#debates" },
-          { label: "Format",   href: "/#format"  },
-          { label: "Rankings", href: "/rankings" },
-        ].map(({ label, href }) => {
+          { label: "Debates",  href: "/#debates",  anchor: "debates"  },
+          { label: "Format",   href: "/#format",   anchor: "format"   },
+          { label: "Rankings", href: "/rankings",  anchor: null       },
+        ].map(({ label, href, anchor }) => {
           const isActive = href.startsWith("/") && !href.startsWith("/#") && pathname === href;
+
+          const handleAnchorClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+            if (!anchor) return;
+            if (pathname === "/") {
+              e.preventDefault();
+              document.getElementById(anchor)?.scrollIntoView({ behavior: "smooth" });
+              window.history.pushState(null, "", `/#${anchor}`);
+            }
+          };
+
           return (
             <Link
               key={label}
               href={href}
+              onClick={handleAnchorClick}
               style={{
                 fontSize: "12px",
                 color: isActive ? "var(--g)" : "var(--dim)",

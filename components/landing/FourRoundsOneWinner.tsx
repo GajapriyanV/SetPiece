@@ -293,6 +293,7 @@ export default function FourRoundsOneWinner() {
     <section id="format" style={{
       background: "var(--dark2)",
       borderBottom: "1px solid var(--border)",
+      scrollMarginTop: "60px",
       padding: "100px 44px",
     }}>
       <div ref={ref} style={{ maxWidth: "1400px", margin: "0 auto" }}>

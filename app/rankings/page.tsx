@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { CURRENT_SEASON } from "@/lib/season";
 
 // ── Feature flag ───────────────────────────────────────────────────────────────
@@ -115,6 +116,7 @@ function PodiumCard({
   mode: Mode;
 }) {
   const [hovered, setHovered] = useState(false);
+  const router = useRouter();
   const s = PODIUM_STYLES[styleIndex];
   const color = avatarColor(player.id);
   const bigNum =
@@ -136,6 +138,7 @@ function PodiumCard({
 
   return (
     <div
+      onClick={() => router.push(`/profile/${player.username}`)}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
@@ -345,6 +348,7 @@ function PlayerRow({
   mode: Mode;
   isMe: boolean;
 }) {
+  const router = useRouter();
   const color = avatarColor(player.id);
   const rankColor =
     rank === 1
@@ -359,6 +363,7 @@ function PlayerRow({
 
   return (
     <div
+      onClick={() => router.push(`/profile/${player.username}`)}
       style={{
         display: "grid",
         gridTemplateColumns: colTemplate,

@@ -179,6 +179,13 @@ export default function EditProfileModal({ initial, onClose, onSaved }: EditProf
       return;
     }
 
+    // Refresh the Redis profile cache so rooms pick up the new username/avatar immediately
+    await fetch("/api/profile/me", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username: form.username.trim(), avatar_url: newAvatarUrl }),
+    });
+
     setSuccess(true);
     setTimeout(() => {
       onSaved({

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 interface Player {
   id: string;
@@ -37,6 +38,7 @@ const rankColor = (r: number) => {
 
 export default function LeaderboardPreview() {
   const ref = useRef<HTMLDivElement>(null);
+  const router = useRouter();
   const [players, setPlayers] = useState<Player[]>([]);
 
   useEffect(() => {
@@ -205,6 +207,7 @@ export default function LeaderboardPreview() {
                 : players.map((p, i) => (
                     <div
                       key={p.id}
+                      onClick={() => router.push(`/profile/${p.username}`)}
                       style={{
                         display: "grid",
                         gridTemplateColumns: "44px 1fr 64px 64px 80px",

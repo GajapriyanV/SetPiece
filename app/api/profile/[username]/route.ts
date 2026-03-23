@@ -1,33 +1,18 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
-import { cacheUserProfile } from "@/lib/redis";
 
-export async function PATCH(request: Request) {
+export async function GET(
+  _request: Request,
+  { params }: { params: Promise<{ username: string }> }
+) {
+  const { username } = await params;
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-
-  const { username, avatar_url } = await request.json();
-  await cacheUserProfile(user.id, username, avatar_url ?? null);
-  return NextResponse.json({ ok: true });
-}
-
-export async function GET() {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  }
 
   // ── Profile ───────────────────────────────────────────────────────────────────
   const { data: profile } = await supabase
     .from("profiles")
-    .select("id, username, name, country, club, elo, wins, losses, draws, debates_count, username_changed_at, avatar_url")
-    .eq("id", user.id)
+    .select("id, username, name, country, club, elo, wins, losses, draws, debates_count, avatar_url, created_at")
+    .eq("username", username)
     .single();
 
   if (!profile) {
@@ -53,14 +38,14 @@ export async function GET() {
       "id, topic, side_a_label, side_b_label, debater_a_id, debater_b_id, winner_id, result, votes_a, votes_b, elo_change, finished_at"
     )
     .eq("status", "finished")
-    .or(`debater_a_id.eq.${user.id},debater_b_id.eq.${user.id}`)
+    .or(`debater_a_id.eq.${profile.id},debater_b_id.eq.${profile.id}`)
     .order("finished_at", { ascending: false })
     .limit(20);
 
   const debateHistory = (debates ?? []).map((d) => {
-    const isA = d.debater_a_id === user.id;
+    const isA = d.debater_a_id === profile.id;
     const isDraw = d.result === "draw";
-    const isWin = !isDraw && d.winner_id === user.id;
+    const isWin = !isDraw && d.winner_id === profile.id;
     const result: "WIN" | "LOSS" | "DRAW" = isDraw ? "DRAW" : isWin ? "WIN" : "LOSS";
     const eloDelta = isDraw ? 0 : isWin ? (d.elo_change ?? 0) : -(d.elo_change ?? 0);
 
@@ -83,14 +68,14 @@ export async function GET() {
   });
 
   // ── Join date ─────────────────────────────────────────────────────────────────
-  const joinDate = new Date(user.created_at).toLocaleDateString("en-GB", {
+  const joinDate = new Date(profile.created_at).toLocaleDateString("en-GB", {
     month: "short",
     year: "numeric",
   });
 
   return NextResponse.json({
     username: profile.username,
-    name: profile.name || profile.username,   // profiles.name is canonical; username is fallback
+    name: profile.name || profile.username,
     country: profile.country ?? null,
     club: profile.club ?? null,
     elo: profile.elo ?? 1200,
@@ -101,7 +86,6 @@ export async function GET() {
     rank,
     totalDebaters: totalDebaters ?? 0,
     joinDate,
-    username_changed_at: profile.username_changed_at ?? null,
     avatar_url: profile.avatar_url ?? null,
     debates: debateHistory,
   });

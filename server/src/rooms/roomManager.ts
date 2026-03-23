@@ -4,6 +4,7 @@ import * as store from "../state/roomStore.js";
 import type { RoomMember, FullRoomState, UserBrief } from "../types/room.js";
 import type { SocketData } from "../types/events.js";
 import { logger } from "../utils/logger.js";
+import { redis } from "../lib/redis.js";
 
 const MAX_MEMBERS = 6;
 const MAX_MEMBERS_FEATURED = 50;
@@ -72,10 +73,21 @@ export async function joinRoom(
   const cap = room.isFeatured ? MAX_MEMBERS_FEATURED : MAX_MEMBERS;
   if (count >= cap) return null;
 
+  // Read fresh profile data from Redis cache (written on auth and on profile save)
+  // so username/avatarUrl are always up-to-date even if the socket was authenticated earlier
+  const cached = await redis.get(`sp:profile:${socket.data.userId}`);
+  const profile = cached
+    ? (typeof cached === "string" ? JSON.parse(cached) : cached) as { username: string; avatarUrl: string | null }
+    : null;
+  const username = profile?.username || socket.data.username;
+  const avatarUrl = profile?.avatarUrl ?? socket.data.avatarUrl;
+  socket.data.username = username;
+  socket.data.avatarUrl = avatarUrl;
+
   const member: RoomMember = {
     userId: socket.data.userId,
-    username: socket.data.username,
-    avatarUrl: socket.data.avatarUrl,
+    username,
+    avatarUrl,
     side: null,
     isReady: false,
     joinedAt: Date.now(),

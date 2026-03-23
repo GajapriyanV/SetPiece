@@ -57,6 +57,7 @@ function DebaterCard({
   name,
   stance,
   avatar,
+  avatarUrl,
   avatarColor,
   active,
   speaking,
@@ -65,6 +66,7 @@ function DebaterCard({
   name: string;
   stance: string;
   avatar: string;
+  avatarUrl?: string | null;
   avatarColor: string;
   active: boolean;
   speaking: boolean;
@@ -103,9 +105,14 @@ function DebaterCard({
           fontWeight: 700,
           color: "#fff",
           transition: "background 0.3s",
+          overflow: "hidden",
         }}
       >
-        {avatar}
+        {avatarUrl ? (
+          <img src={avatarUrl} alt={name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        ) : (
+          avatar
+        )}
       </div>
 
       <div
@@ -361,6 +368,7 @@ export default function LiveView({
           name={debaterA?.username ?? "—"}
           stance={sideALabel}
           avatar={(debaterA?.username ?? "?")[0].toUpperCase()}
+          avatarUrl={debaterA?.avatarUrl}
           avatarColor="#3b82f6"
           active={activeSide === "a"}
           speaking={activeSide === "a" && debaterA ? !!isSpeaking[debaterA.userId] : false}
@@ -384,6 +392,7 @@ export default function LiveView({
           name={debaterB?.username ?? "—"}
           stance={sideBLabel}
           avatar={(debaterB?.username ?? "?")[0].toUpperCase()}
+          avatarUrl={debaterB?.avatarUrl}
           avatarColor="#fb923c"
           active={activeSide === "b"}
           speaking={activeSide === "b" && debaterB ? !!isSpeaking[debaterB.userId] : false}

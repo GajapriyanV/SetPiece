@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 
 const NAV_LINKS = [
   { label: "Contact Us", href: null },
@@ -24,16 +25,8 @@ export default function LandingFooter() {
         background: "var(--dark2)",
       }}
     >
-      <div
-        style={{
-          fontFamily: "var(--font-oswald, 'Oswald', sans-serif)",
-          fontSize: "16px",
-          letterSpacing: "4px",
-          fontWeight: 500,
-          textTransform: "uppercase",
-        }}
-      >
-        SET<span style={{ color: "var(--g)" }}>/</span>PIECE
+      <div style={{ display: "flex", alignItems: "center" }}>
+        <Image src="/logo.png" alt="SetPiece" width={200} height={60} style={{ display: "block", height: "28px", width: "auto" }} />
       </div>
 
       <div style={{ display: "flex", gap: "24px" }}>

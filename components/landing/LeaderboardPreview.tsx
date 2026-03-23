@@ -10,6 +10,7 @@ interface Player {
   wins: number;
   losses: number;
   winPct: number;
+  avatarUrl?: string | null;
 }
 
 const AVATAR_COLORS = [
@@ -260,9 +261,14 @@ export default function LeaderboardPreview() {
                             fontWeight: 700,
                             color: "#fff",
                             flexShrink: 0,
+                            overflow: "hidden",
                           }}
                         >
-                          {p.username[0]?.toUpperCase() ?? "?"}
+                          {p.avatarUrl ? (
+                            <img src={p.avatarUrl} alt={p.username} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                          ) : (
+                            p.username[0]?.toUpperCase() ?? "?"
+                          )}
                         </div>
                         <div>
                           <div style={{ fontSize: "14px", fontWeight: 600 }}>

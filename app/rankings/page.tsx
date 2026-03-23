@@ -27,6 +27,7 @@ interface Player {
   winPct: number;
   elo: number;
   debates_count: number;
+  avatarUrl?: string | null;
 }
 
 interface MyStats {
@@ -215,9 +216,14 @@ function PodiumCard({
             boxShadow: s.isChampion
               ? "0 0 0 2px rgba(234,179,8,0.5), 0 0 20px rgba(234,179,8,0.2)"
               : "none",
+            overflow: "hidden",
           }}
         >
-          {player.username[0]?.toUpperCase() ?? "?"}
+          {player.avatarUrl ? (
+            <img src={player.avatarUrl} alt={player.username} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          ) : (
+            player.username[0]?.toUpperCase() ?? "?"
+          )}
         </div>
 
         {/* Name + record */}
@@ -438,9 +444,14 @@ function PlayerRow({
             fontWeight: 700,
             color: isMe ? "#000" : "#fff",
             flexShrink: 0,
+            overflow: "hidden",
           }}
         >
-          {player.username[0]?.toUpperCase() ?? "?"}
+          {player.avatarUrl ? (
+            <img src={player.avatarUrl} alt={player.username} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          ) : (
+            player.username[0]?.toUpperCase() ?? "?"
+          )}
         </div>
         <div>
           <div

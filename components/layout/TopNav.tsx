@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import SignInModal from "@/components/auth/SignInModal";
+import Image from "next/image";
 import { createClient } from "@/utils/supabase/client";
 import type { User } from "@supabase/supabase-js";
 
@@ -80,20 +81,13 @@ export default function TopNav() {
           }
         }}
         style={{
-          fontFamily: "var(--font-oswald, 'Oswald', sans-serif)",
-          fontSize: "17px",
-          letterSpacing: "4px",
-          fontWeight: 500,
-          textTransform: "uppercase",
-          color: "var(--text)",
           display: "flex",
           alignItems: "center",
-          gap: "2px",
           textDecoration: "none",
           cursor: "pointer",
         }}
       >
-        SET<span style={{ color: "var(--g)", fontWeight: 300 }}>/</span>PIECE
+        <Image src="/logo.png" alt="SetPiece" width={200} height={60} style={{ display: "block", height: "34px", width: "auto" }} />
       </Link>
 
       {/* Center links */}

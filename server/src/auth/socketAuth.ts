@@ -1,6 +1,7 @@
 import type { Socket } from "socket.io";
 import { verifyToken } from "./verifyToken.js";
 import { supabase } from "../lib/supabase.js";
+import { redis } from "../lib/redis.js";
 import { logger } from "../utils/logger.js";
 import type { SocketData } from "../types/events.js";
 
@@ -20,7 +21,7 @@ export async function socketAuth(
     // Try to get username from profiles table, fall back to token metadata
     const { data: profile } = await supabase
       .from("profiles")
-      .select("username")
+      .select("username, avatar_url")
       .eq("id", payload.sub)
       .single();
 
@@ -30,7 +31,14 @@ export async function socketAuth(
       payload.email?.split("@")[0] ||
       "Anonymous";
 
-    socket.data.avatarUrl = payload.user_metadata?.avatar_url || null;
+    socket.data.avatarUrl = profile?.avatar_url || null;
+
+    // Warm the Redis profile cache so joinRoom can read fresh data without a DB query
+    redis.set(
+      `sp:profile:${payload.sub}`,
+      JSON.stringify({ username: socket.data.username, avatarUrl: socket.data.avatarUrl }),
+      { ex: 86400 }
+    );
 
     logger.info({ userId: socket.data.userId, username: socket.data.username }, "Socket authenticated");
     next();

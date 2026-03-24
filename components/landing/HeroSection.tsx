@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import SignInModal from "@/components/auth/SignInModal";
 import { createClient } from "@/utils/supabase/client";
@@ -16,11 +16,17 @@ const BASE_TICKER = [
 const TICKER_ITEMS = [...BASE_TICKER, ...BASE_TICKER];
 
 export default function HeroSection() {
-  const counterRef = useRef<HTMLSpanElement>(null);
   const router = useRouter();
   const supabase = createClient();
   const [showSignIn, setShowSignIn] = useState(false);
   const [user, setUser] = useState<unknown>(null);
+  const [stats, setStats] = useState<{
+    mostWins: { username: string; wins: number } | null;
+    debatesToday: number;
+    debatesPctChange: number | null;
+    votesCastAllTime: number;
+    debatingNow: number;
+  } | null>(null);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data.user));
@@ -30,6 +36,10 @@ export default function HeroSection() {
     return () => subscription.unsubscribe();
   }, [supabase.auth]);
 
+  useEffect(() => {
+    fetch("/api/stats").then((r) => r.json()).then(setStats);
+  }, []);
+
   const handleEnterPitch = () => {
     if (user) {
       router.push("/rooms");
@@ -37,15 +47,6 @@ export default function HeroSection() {
       setShowSignIn(true);
     }
   };
-
-  useEffect(() => {
-    let count = 847;
-    const id = setInterval(() => {
-      count += Math.floor(Math.random() * 2);
-      if (counterRef.current) counterRef.current.textContent = count.toLocaleString();
-    }, 4000);
-    return () => clearInterval(id);
-  }, []);
 
   return (
     <>
@@ -133,7 +134,7 @@ export default function HeroSection() {
             }}
           >
             <div className="live-dot" style={{ width: "5px", height: "5px", background: "var(--g)", borderRadius: "50%" }} />
-            847 debating now
+            {stats?.debatingNow ?? "—"} debating now
           </div>
           <div style={{ width: "1px", height: "16px", background: "var(--border2)" }} />
           <div
@@ -167,7 +168,11 @@ export default function HeroSection() {
               color: "var(--dim)",
             }}
           >
-            94,231 votes cast
+            {stats != null
+              ? stats.votesCastAllTime >= 1000
+                ? `${(stats.votesCastAllTime / 1000).toFixed(1)}K`
+                : stats.votesCastAllTime.toString()
+              : "—"} votes cast
           </div>
         </div>
 
@@ -217,20 +222,21 @@ export default function HeroSection() {
           </div>
         </div>
 
-        {/* Cell 2 — Top rated */}
+        {/* Cell 2 — Most Wins */}
         <div style={{ background: "var(--dark2)", padding: "20px 24px", borderLeft: "1px solid var(--border)" }}>
           <div style={{
             fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
             fontSize: "9px", letterSpacing: "2px", textTransform: "uppercase",
             color: "var(--dim)", marginBottom: "8px",
-          }}>Top Rated</div>
+          }}>Most Wins</div>
           <div style={{
-            fontFamily: "var(--font-body, 'Familjen Grotesk', sans-serif)",
-            fontSize: "20px", fontWeight: 700, lineHeight: 1,
-            color: "var(--text)",
-          }}>TacticalGenius_</div>
+            fontFamily: "var(--font-oswald, 'Oswald', sans-serif)",
+            fontSize: "36px", fontWeight: 700, lineHeight: 1,
+            color: "var(--text)", letterSpacing: "-1px",
+            minHeight: "36px", display: "flex", alignItems: "flex-start",
+          }}>{stats?.mostWins?.username ?? "—"}</div>
           <div style={{ fontSize: "12px", color: "var(--dim)", marginTop: "4px", fontFamily: "var(--font-mono)" }}>
-            Rating 2,341
+            {stats?.mostWins != null ? `${stats.mostWins.wins} wins` : "—"}
           </div>
         </div>
 
@@ -246,10 +252,12 @@ export default function HeroSection() {
             fontSize: "36px", fontWeight: 700, lineHeight: 1,
             color: "var(--g)", letterSpacing: "-1px",
           }}>
-            <span ref={counterRef}>133</span>
+            {stats?.debatesToday ?? "—"}
           </div>
           <div style={{ fontSize: "12px", color: "var(--dim)", marginTop: "4px", fontFamily: "var(--font-mono)" }}>
-            ↑ 18% vs yesterday
+            {stats?.debatesPctChange != null
+              ? `${stats.debatesPctChange >= 0 ? "↑" : "↓"} ${Math.abs(stats.debatesPctChange)}% vs yesterday`
+              : "Since midnight"}
           </div>
         </div>
 
@@ -264,7 +272,13 @@ export default function HeroSection() {
             fontFamily: "var(--font-oswald, 'Oswald', sans-serif)",
             fontSize: "36px", fontWeight: 700, lineHeight: 1,
             color: "var(--text)", letterSpacing: "-1px",
-          }}>94.2K</div>
+          }}>
+            {stats != null
+              ? stats.votesCastAllTime >= 1000
+                ? `${(stats.votesCastAllTime / 1000).toFixed(1)}K`
+                : stats.votesCastAllTime.toString()
+              : "—"}
+          </div>
           <div style={{ fontSize: "12px", color: "var(--dim)", marginTop: "4px", fontFamily: "var(--font-mono)" }}>
             All time
           </div>

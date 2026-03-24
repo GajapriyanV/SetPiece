@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Image from "next/image";
 import { createClient } from "@/utils/supabase/client";
 import SearchableSelect from "@/components/ui/SearchableSelect";
 import { COUNTRIES } from "@/lib/data/countries";
@@ -278,13 +279,8 @@ function RegisterContent() {
           display: "flex", alignItems: "center", justifyContent: "space-between",
           padding: "14px 24px", borderBottom: "1px solid var(--border)",
         }}>
-          <div style={{
-            fontFamily: "var(--font-oswald, 'Oswald', sans-serif)",
-            fontSize: "16px", fontWeight: 600, letterSpacing: "4px",
-            textTransform: "uppercase", color: "var(--text)",
-            display: "flex", alignItems: "center", gap: "2px",
-          }}>
-            SET <span style={{ color: "var(--g)", fontWeight: 300, margin: "0 2px" }}>/</span> PIECE
+          <div style={{ display: "flex", alignItems: "center" }}>
+            <Image src="/logo.png" alt="SetPiece" width={200} height={60} style={{ display: "block", height: "28px", width: "auto" }} />
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
             {showSignOut && (

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 interface Player {
   id: string;
@@ -9,6 +10,7 @@ interface Player {
   wins: number;
   losses: number;
   winPct: number;
+  avatarUrl?: string | null;
 }
 
 const AVATAR_COLORS = [
@@ -37,6 +39,7 @@ const rankColor = (r: number) => {
 
 export default function LeaderboardPreview() {
   const ref = useRef<HTMLDivElement>(null);
+  const router = useRouter();
   const [players, setPlayers] = useState<Player[]>([]);
 
   useEffect(() => {
@@ -205,6 +208,7 @@ export default function LeaderboardPreview() {
                 : players.map((p, i) => (
                     <div
                       key={p.id}
+                      onClick={() => router.push(`/profile/${p.username}`)}
                       style={{
                         display: "grid",
                         gridTemplateColumns: "44px 1fr 64px 64px 80px",
@@ -257,9 +261,14 @@ export default function LeaderboardPreview() {
                             fontWeight: 700,
                             color: "#fff",
                             flexShrink: 0,
+                            overflow: "hidden",
                           }}
                         >
-                          {p.username[0]?.toUpperCase() ?? "?"}
+                          {p.avatarUrl ? (
+                            <img src={p.avatarUrl} alt={p.username} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                          ) : (
+                            p.username[0]?.toUpperCase() ?? "?"
+                          )}
                         </div>
                         <div>
                           <div style={{ fontSize: "14px", fontWeight: 600 }}>

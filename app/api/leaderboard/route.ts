@@ -47,7 +47,7 @@ export async function GET(req: NextRequest) {
   if (period === "alltime") {
     let query = supabase
       .from("profiles")
-      .select("id, username, country, elo, wins, losses, draws, debates_count", {
+      .select("id, username, country, elo, wins, losses, draws, debates_count, avatar_url, created_at", {
         count: "exact",
       });
 
@@ -56,12 +56,16 @@ export async function GET(req: NextRequest) {
     }
 
     if (type === "ranked") {
-      query = query.order("elo", { ascending: false });
+      query = query
+        .order("elo", { ascending: false })
+        .order("debates_count", { ascending: false })
+        .order("created_at", { ascending: true });
     } else {
-      // Primary: wins desc. Secondary: fewer losses (approximate win% tiebreaker).
       query = query
         .order("wins", { ascending: false })
-        .order("losses", { ascending: true });
+        .order("losses", { ascending: true }) // fewer losses = higher win% when wins are equal
+        .order("debates_count", { ascending: false })
+        .order("created_at", { ascending: true });
     }
 
     query = query.range(offset, offset + PAGE_SIZE - 1);
@@ -84,6 +88,7 @@ export async function GET(req: NextRequest) {
         debates_count: p.debates_count ?? 0,
         winPct,
         elo: p.elo ?? 1200,
+        avatarUrl: p.avatar_url ?? null,
       };
     });
 
@@ -122,7 +127,7 @@ export async function GET(req: NextRequest) {
   // Fetch ALL profiles so non-debaters still appear (with 0 season wins)
   let profileQuery = supabase
     .from("profiles")
-    .select("id, username, country, elo");
+    .select("id, username, country, elo, avatar_url, created_at");
 
   if (section === "regional" && userCountry) {
     profileQuery = profileQuery.eq("country", userCountry);
@@ -144,15 +149,24 @@ export async function GET(req: NextRequest) {
       winPct,
       elo: p.elo ?? 1200,
       debates_count: debateTotal,
+      avatarUrl: p.avatar_url ?? null,
+      createdAt: p.created_at as string | null,
     };
   });
 
   if (type === "ranked") {
-    merged.sort((a, b) => b.elo - a.elo);
+    merged.sort((a, b) => {
+      if (b.elo !== a.elo) return b.elo - a.elo;
+      if (b.debates_count !== a.debates_count) return b.debates_count - a.debates_count;
+      return (a.createdAt ?? "").localeCompare(b.createdAt ?? "");
+    });
   } else {
-    merged.sort((a, b) =>
-      b.wins !== a.wins ? b.wins - a.wins : b.winPct - a.winPct
-    );
+    merged.sort((a, b) => {
+      if (b.wins !== a.wins) return b.wins - a.wins;
+      if (b.winPct !== a.winPct) return b.winPct - a.winPct;
+      if (b.debates_count !== a.debates_count) return b.debates_count - a.debates_count;
+      return (a.createdAt ?? "").localeCompare(b.createdAt ?? "");
+    });
   }
 
   const total = merged.length;

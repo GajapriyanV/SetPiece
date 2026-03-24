@@ -7,70 +7,37 @@ import { createClient } from "@/utils/supabase/client";
 import SignInModal from "@/components/auth/SignInModal";
 import type { User } from "@supabase/supabase-js";
 
-type DebateStatus = "live" | "soon" | "upcoming";
-
-interface Debate {
-  id: string;
-  status: DebateStatus;
-  viewers: number;
+interface Room {
+  roomId: string;
   topic: string;
-  sideA: string;
-  sideB: string;
-  phase: string;
-  voteWidth: number;
-  startsIn?: string;
+  sideALabel: string;
+  sideBLabel: string;
+  status: "lobby" | "side_pick" | "live" | "voting" | "results";
+  memberCount: number;
+  isFeatured: boolean;
 }
 
-const DEBATES: Debate[] = [
-  {
-    id: "1", status: "live", viewers: 847,
-    topic: "Who's The Better Generational Talent?",
-    sideA: "Erling Haaland", sideB: "Kylian Mbappé",
-    phase: "Rebuttal Round", voteWidth: 58,
-  },
-  {
-    id: "2", status: "live", viewers: 312,
-    topic: "Greatest Player Of All Time",
-    sideA: "Lionel Messi", sideB: "Cristiano Ronaldo",
-    phase: "Opening Round", voteWidth: 63,
-  },
-  {
-    id: "3", status: "soon", viewers: 89,
-    topic: "Best Tactical System In Modern Football",
-    sideA: "High Press", sideB: "Tiki-Taka",
-    phase: "Join Room", voteWidth: 50, startsIn: "6 min",
-  },
-  {
-    id: "4", status: "soon", viewers: 54,
-    topic: "Premier League's Greatest Ever Season",
-    sideA: "Man City 23/24", sideB: "Arsenal 03/04",
-    phase: "Join Room", voteWidth: 50, startsIn: "14 min",
-  },
-  {
-    id: "5", status: "live", viewers: 156,
-    topic: "Best Midfielder Of His Generation",
-    sideA: "Bellingham", sideB: "Pedri",
-    phase: "Closing Round", voteWidth: 52,
-  },
-];
+const STATUS_PRIORITY: Record<Room["status"], number> = {
+  live: 0, voting: 1, side_pick: 2, lobby: 3, results: 4,
+};
 
-function DebateCard({ debate }: { debate: Debate }) {
-  const [voteW, setVoteW] = useState(debate.voteWidth);
+const STATUS_LABEL: Record<Room["status"], string> = {
+  live: "Live Now",
+  voting: "Voting",
+  side_pick: "Picking Sides",
+  lobby: "In Lobby",
+  results: "Finished",
+};
+
+function DebateCard({ room }: { room: Room }) {
   const [hovered, setHovered] = useState(false);
-
-  useEffect(() => {
-    if (debate.status !== "live") return;
-    const id = setInterval(() => {
-      setVoteW((w) => Math.max(35, Math.min(65, w + (Math.random() - 0.5) * 3)));
-    }, 2200);
-    return () => clearInterval(id);
-  }, [debate.status]);
-
-  const isLive = debate.status === "live";
-  const borderColor = isLive ? "var(--g)" : "var(--border)";
+  const isActive = room.status === "live" || room.status === "voting";
+  const borderColor = isActive ? "var(--g)" : "var(--border)";
+  const dotColor = isActive ? "var(--red)" : "var(--dim)";
 
   return (
-    <div
+    <Link
+      href={`/rooms/${room.roomId}`}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
@@ -83,6 +50,7 @@ function DebateCard({ debate }: { debate: Debate }) {
         transition: "background 0.25s",
         cursor: "pointer",
         position: "relative",
+        textDecoration: "none",
       }}
     >
       {/* Status row */}
@@ -91,18 +59,18 @@ function DebateCard({ debate }: { debate: Debate }) {
           display: "inline-flex", alignItems: "center", gap: "6px",
           fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
           fontSize: "10px", letterSpacing: "1.5px", textTransform: "uppercase",
-          color: isLive ? "var(--red)" : "var(--g)",
+          color: dotColor,
         }}>
-          <div className={isLive ? "status-dot-live" : ""} style={{
+          <div className={isActive ? "status-dot-live" : ""} style={{
             width: "5px", height: "5px", borderRadius: "50%", background: "currentColor", flexShrink: 0,
           }} />
-          {isLive ? "Live Now" : `Starting in ${debate.startsIn}`}
+          {STATUS_LABEL[room.status]}
         </div>
         <span style={{
           fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
           fontSize: "10px", color: "var(--dim)", letterSpacing: "1px",
         }}>
-          {isLive ? `${debate.viewers.toLocaleString()} watching` : `${debate.viewers} waiting`}
+          {room.memberCount} {isActive ? "watching" : "in room"}
         </span>
       </div>
 
@@ -112,8 +80,9 @@ function DebateCard({ debate }: { debate: Debate }) {
         fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px",
         fontSize: "clamp(16px, 1.4vw, 22px)", lineHeight: 1.1,
         marginBottom: "20px", flex: 1,
+        color: "var(--text)",
       }}>
-        {debate.topic}
+        {room.topic}
       </div>
 
       {/* Sides */}
@@ -125,7 +94,7 @@ function DebateCard({ debate }: { debate: Debate }) {
           display: "flex", flexDirection: "column", gap: "2px",
         }}>
           <span style={{ fontSize: "9px", opacity: 0.6, textTransform: "uppercase", letterSpacing: "1px", fontFamily: "var(--font-mono)" }}>Side A</span>
-          {debate.sideA}
+          {room.sideALabel}
         </div>
         <span style={{
           fontFamily: "var(--font-oswald, 'Oswald', sans-serif)",
@@ -138,35 +107,80 @@ function DebateCard({ debate }: { debate: Debate }) {
           display: "flex", flexDirection: "column", gap: "2px",
         }}>
           <span style={{ fontSize: "9px", opacity: 0.6, textTransform: "uppercase", letterSpacing: "1px", fontFamily: "var(--font-mono)" }}>Side B</span>
-          {debate.sideB}
+          {room.sideBLabel}
         </div>
       </div>
-
-      {/* Vote bar */}
-      {isLive && (
-        <div style={{ height: "2px", background: "var(--border2)", borderRadius: "2px", overflow: "hidden", marginBottom: "12px" }}>
-          <div style={{
-            height: "100%", width: `${voteW}%`,
-            background: "linear-gradient(90deg, #3b82f6, #fb923c)",
-            transition: "width 1.2s ease",
-          }} />
-        </div>
-      )}
 
       {/* Footer */}
       <div style={{
         fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
-        fontSize: "10px", color: isLive ? "var(--g)" : "var(--dim)",
+        fontSize: "10px", color: isActive ? "var(--g)" : "var(--dim)",
         letterSpacing: "1.5px", textTransform: "uppercase",
       }}>
-        {isLive ? `${debate.phase} →` : "Join Room →"}
+        {isActive ? "Watch Debate →" : "Join Room →"}
+      </div>
+    </Link>
+  );
+}
+
+function LoadingCard() {
+  return (
+    <div style={{
+      background: "var(--card)",
+      borderLeft: "2px solid var(--border)",
+      padding: "24px",
+      display: "flex", flexDirection: "column", gap: "12px",
+      minHeight: "200px",
+    }}>
+      <div style={{ width: "80px", height: "10px", background: "var(--border2)", borderRadius: "2px" }} />
+      <div style={{ width: "100%", height: "22px", background: "var(--border2)", borderRadius: "2px", marginTop: "4px" }} />
+      <div style={{ width: "70%", height: "22px", background: "var(--border2)", borderRadius: "2px" }} />
+      <div style={{ display: "flex", gap: "8px", marginTop: "8px" }}>
+        <div style={{ flex: 1, height: "52px", background: "var(--border2)", borderRadius: "3px" }} />
+        <div style={{ width: "24px" }} />
+        <div style={{ flex: 1, height: "52px", background: "var(--border2)", borderRadius: "3px" }} />
       </div>
     </div>
   );
 }
 
-function MoreCard({ onClick }: { onClick: () => void }) {
+function EmptyCard({ onStart }: { onStart: () => void }) {
   const [hovered, setHovered] = useState(false);
+  return (
+    <div style={{
+      gridColumn: "1 / -1",
+      background: "var(--card)",
+      padding: "60px 24px",
+      display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "20px",
+    }}>
+      <div style={{
+        fontFamily: "var(--font-oswald, 'Oswald', sans-serif)",
+        fontSize: "20px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "1px",
+        color: "var(--dim)",
+      }}>No live debates right now</div>
+      <button
+        onClick={onStart}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        style={{
+          fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+          fontSize: "11px", letterSpacing: "2px", textTransform: "uppercase",
+          color: hovered ? "var(--g)" : "var(--dim)",
+          background: "none", border: "none", cursor: "pointer",
+          borderBottom: `1px solid ${hovered ? "var(--g)" : "var(--border2)"}`,
+          paddingBottom: "3px",
+          transition: "color 0.2s, border-color 0.2s",
+        }}
+      >
+        Start a debate now →
+      </button>
+    </div>
+  );
+}
+
+function MoreCard({ onClick, span }: { onClick: () => void; span: number }) {
+  const [hovered, setHovered] = useState(false);
+  const wide = span > 1;
   return (
     <div
       role="button"
@@ -176,33 +190,66 @@ function MoreCard({ onClick }: { onClick: () => void }) {
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
+        gridColumn: span > 1 ? `span ${span}` : undefined,
         background: hovered ? "#13131a" : "var(--card)",
-        display: "flex", flexDirection: "column",
-        alignItems: "center", justifyContent: "center",
-        padding: "40px 24px",
+        display: "flex",
+        flexDirection: wide ? "row" : "column",
+        alignItems: "center",
+        justifyContent: wide ? "space-between" : "center",
+        padding: wide ? "28px 40px" : "40px 24px",
         transition: "background 0.25s", cursor: "pointer",
         border: `1px dashed ${hovered ? "var(--g)" : "var(--border2)"}`,
-        gap: "16px",
+        gap: wide ? "0" : "16px",
       }}
     >
-      <div style={{
-        width: "48px", height: "48px", border: `1px solid ${hovered ? "var(--g)" : "var(--border2)"}`,
-        borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
-        fontSize: "20px", color: hovered ? "var(--g)" : "var(--dim)", transition: "all 0.25s",
-        letterSpacing: "2px",
-      }}>···</div>
-      <div style={{
-        fontFamily: "var(--font-oswald, 'Oswald', sans-serif)",
-        fontSize: "16px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "2px",
-        color: hovered ? "var(--g)" : "var(--dim)", transition: "color 0.25s",
-      }}>More Rooms</div>
-      <div style={{
-        fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
-        fontSize: "10px", color: "var(--dim)", letterSpacing: "1.5px",
-        textTransform: "uppercase", textAlign: "center",
-      }}>
-        Browse all live debates
-      </div>
+      {wide ? (
+        <>
+          <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
+            <div style={{
+              width: "36px", height: "36px", border: `1px solid ${hovered ? "var(--g)" : "var(--border2)"}`,
+              borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: "16px", color: hovered ? "var(--g)" : "var(--dim)", transition: "all 0.25s",
+              letterSpacing: "2px", flexShrink: 0,
+            }}>···</div>
+            <div>
+              <div style={{
+                fontFamily: "var(--font-oswald, 'Oswald', sans-serif)",
+                fontSize: "16px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "2px",
+                color: hovered ? "var(--g)" : "var(--dim)", transition: "color 0.25s",
+              }}>More Rooms</div>
+              <div style={{
+                fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+                fontSize: "10px", color: "var(--dim)", letterSpacing: "1.5px",
+                textTransform: "uppercase", marginTop: "4px",
+              }}>Browse all live debates</div>
+            </div>
+          </div>
+          <div style={{
+            fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+            fontSize: "11px", color: hovered ? "var(--g)" : "var(--dim)",
+            letterSpacing: "2px", textTransform: "uppercase", transition: "color 0.25s",
+          }}>View all →</div>
+        </>
+      ) : (
+        <>
+          <div style={{
+            width: "48px", height: "48px", border: `1px solid ${hovered ? "var(--g)" : "var(--border2)"}`,
+            borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: "20px", color: hovered ? "var(--g)" : "var(--dim)", transition: "all 0.25s",
+            letterSpacing: "2px",
+          }}>···</div>
+          <div style={{
+            fontFamily: "var(--font-oswald, 'Oswald', sans-serif)",
+            fontSize: "16px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "2px",
+            color: hovered ? "var(--g)" : "var(--dim)", transition: "color 0.25s",
+          }}>More Rooms</div>
+          <div style={{
+            fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+            fontSize: "10px", color: "var(--dim)", letterSpacing: "1.5px",
+            textTransform: "uppercase", textAlign: "center",
+          }}>Browse all live debates</div>
+        </>
+      )}
     </div>
   );
 }
@@ -213,15 +260,27 @@ export default function LiveDebatesGrid() {
   const supabase = createClient();
   const [user, setUser] = useState<User | null>(null);
   const [showSignIn, setShowSignIn] = useState(false);
+  const [rooms, setRooms] = useState<Room[] | null>(null);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data.user));
-
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
     });
     return () => subscription.unsubscribe();
   // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    fetch(`${process.env.NEXT_PUBLIC_SOCKET_URL}/api/rooms`)
+      .then((r) => r.json())
+      .then((data: Room[]) => {
+        const sorted = data
+          .filter((r) => r.status !== "results")
+          .sort((a, b) => STATUS_PRIORITY[a.status] - STATUS_PRIORITY[b.status]);
+        setRooms(sorted.slice(0, 5));
+      })
+      .catch(() => setRooms([]));
   }, []);
 
   useEffect(() => {
@@ -235,7 +294,7 @@ export default function LiveDebatesGrid() {
     );
     ref.current?.querySelectorAll(".rv").forEach((el) => obs.observe(el));
     return () => obs.disconnect();
-  }, []);
+  }, [rooms]);
 
   const handleMoreRooms = () => {
     if (user) {
@@ -245,38 +304,40 @@ export default function LiveDebatesGrid() {
     }
   };
 
+  const handleStartDebate = () => {
+    if (user) {
+      router.push("/rooms");
+    } else {
+      setShowSignIn(true);
+    }
+  };
+
+  // Calculate how many columns MoreCard should span so the grid has no empty cells.
+  // Grid is 3 columns. total = rooms + 1 (for MoreCard). remainder tells us leftovers in last row.
+  const moreCardSpan = (() => {
+    if (!rooms || rooms.length === 0) return 1;
+    const total = rooms.length + 1;
+    const remainder = total % 3;
+    if (remainder === 0) return 1;
+    if (remainder === 1) return 3;
+    return 2; // remainder === 2
+  })();
+
   return (
     <>
       {showSignIn && <SignInModal onClose={() => setShowSignIn(false)} />}
 
-      <div style={{ background: "var(--dark)", padding: "100px 0" }}>
-        <div ref={ref} id="debates" style={{ padding: "0 40px", maxWidth: "1400px", margin: "0 auto" }}>
+      <div id="debates" style={{ background: "var(--dark)", padding: "100px 0", scrollMarginTop: "60px" }}>
+        <div ref={ref} style={{ padding: "0 40px", maxWidth: "1400px", margin: "0 auto" }}>
 
           {/* Section header */}
-          <div className="rv" style={{
-            display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: "40px",
-          }}>
-            <div>
-              <div className="sec-label">Right Now</div>
-              <h2 style={{
-                fontFamily: "var(--font-oswald, 'Oswald', sans-serif)",
-                fontSize: "clamp(36px, 4vw, 56px)", fontWeight: 700,
-                textTransform: "uppercase", letterSpacing: "-1px", lineHeight: 1,
-              }}>Live Debates</h2>
-            </div>
-            <Link href="/browse" style={{
-              fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
-              fontSize: "11px", letterSpacing: "2px", textTransform: "uppercase",
-              color: "var(--dim)", textDecoration: "none",
-              display: "flex", alignItems: "center", gap: "6px",
-              paddingBottom: "4px", borderBottom: "1px solid var(--border2)",
-              transition: "color 0.2s",
-            }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = "var(--g)"; e.currentTarget.style.borderColor = "var(--g)"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = "var(--dim)"; e.currentTarget.style.borderColor = "var(--border2)"; }}
-            >
-              View all debates →
-            </Link>
+          <div className="rv" style={{ marginBottom: "40px" }}>
+            <div className="sec-label">Right Now</div>
+            <h2 style={{
+              fontFamily: "var(--font-oswald, 'Oswald', sans-serif)",
+              fontSize: "clamp(36px, 4vw, 56px)", fontWeight: 700,
+              textTransform: "uppercase", letterSpacing: "-1px", lineHeight: 1,
+            }}>Live Debates</h2>
           </div>
 
           {/* Grid */}
@@ -287,8 +348,16 @@ export default function LiveDebatesGrid() {
             background: "var(--border)",
             border: "1px solid var(--border)",
           }}>
-            {DEBATES.map((d) => <DebateCard key={d.id} debate={d} />)}
-            <MoreCard onClick={handleMoreRooms} />
+            {rooms === null ? (
+              Array.from({ length: 3 }).map((_, i) => <LoadingCard key={i} />)
+            ) : rooms.length === 0 ? (
+              <EmptyCard onStart={handleStartDebate} />
+            ) : (
+              <>
+                {rooms.map((r) => <DebateCard key={r.roomId} room={r} />)}
+                <MoreCard onClick={handleMoreRooms} span={moreCardSpan} />
+              </>
+            )}
           </div>
         </div>
       </div>

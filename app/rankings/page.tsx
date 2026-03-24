@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { CURRENT_SEASON } from "@/lib/season";
 
 // ── Feature flag ───────────────────────────────────────────────────────────────
@@ -26,6 +27,7 @@ interface Player {
   winPct: number;
   elo: number;
   debates_count: number;
+  avatarUrl?: string | null;
 }
 
 interface MyStats {
@@ -115,6 +117,7 @@ function PodiumCard({
   mode: Mode;
 }) {
   const [hovered, setHovered] = useState(false);
+  const router = useRouter();
   const s = PODIUM_STYLES[styleIndex];
   const color = avatarColor(player.id);
   const bigNum =
@@ -136,6 +139,7 @@ function PodiumCard({
 
   return (
     <div
+      onClick={() => router.push(`/profile/${player.username}`)}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
@@ -212,9 +216,14 @@ function PodiumCard({
             boxShadow: s.isChampion
               ? "0 0 0 2px rgba(234,179,8,0.5), 0 0 20px rgba(234,179,8,0.2)"
               : "none",
+            overflow: "hidden",
           }}
         >
-          {player.username[0]?.toUpperCase() ?? "?"}
+          {player.avatarUrl ? (
+            <img src={player.avatarUrl} alt={player.username} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          ) : (
+            player.username[0]?.toUpperCase() ?? "?"
+          )}
         </div>
 
         {/* Name + record */}
@@ -345,6 +354,7 @@ function PlayerRow({
   mode: Mode;
   isMe: boolean;
 }) {
+  const router = useRouter();
   const color = avatarColor(player.id);
   const rankColor =
     rank === 1
@@ -359,6 +369,7 @@ function PlayerRow({
 
   return (
     <div
+      onClick={() => router.push(`/profile/${player.username}`)}
       style={{
         display: "grid",
         gridTemplateColumns: colTemplate,
@@ -433,9 +444,14 @@ function PlayerRow({
             fontWeight: 700,
             color: isMe ? "#000" : "#fff",
             flexShrink: 0,
+            overflow: "hidden",
           }}
         >
-          {player.username[0]?.toUpperCase() ?? "?"}
+          {player.avatarUrl ? (
+            <img src={player.avatarUrl} alt={player.username} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          ) : (
+            player.username[0]?.toUpperCase() ?? "?"
+          )}
         </div>
         <div>
           <div

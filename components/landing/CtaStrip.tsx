@@ -206,8 +206,6 @@ export default function CtaStrip() {
                     alignItems: "center",
                     justifyContent: "space-between",
                     padding: "20px 0",
-                    borderTop: i === 0 ? "1px solid var(--border)" : "none",
-                    borderBottom: "1px solid var(--border)",
                     textDecoration: "none",
                     transition: "all 0.2s",
                     gap: "16px",

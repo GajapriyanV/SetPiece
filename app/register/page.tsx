@@ -175,13 +175,27 @@ function RegisterContent() {
     if (pwErrors.length > 0) { setError(pwErrors[0]); return; }
 
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
+
+    // If the user already has a session (e.g. pressed Back from step 2), skip sign-up
+    const { data: { session: existing } } = await supabase.auth.getSession();
+    if (existing) {
+      setLoading(false);
+      setStep(2);
+      return;
+    }
+
+    const { data, error } = await supabase.auth.signUp({
       email: form.email,
       password: form.password,
-      options: { data: { username: form.username } },
+      options: {
+        data: { username: form.username },
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+      },
     });
     setLoading(false);
     if (error) { setError(error.message); return; }
+    // If session is null, Supabase requires email confirmation before the user can proceed
+    if (!data.session) { setStep(4); return; }
     setStep(2);
   };
 
@@ -256,7 +270,8 @@ function RegisterContent() {
 
   const passwordErrors = passwordTouched ? getPasswordErrors(form.password) : [];
   void passwordErrors; // used inline below
-  const { heading, sub } = STEP_TITLES[step - 1];
+  // Step 4 is the "verify your email" screen — not in STEP_TITLES
+  const { heading, sub } = step <= 3 ? STEP_TITLES[step - 1] : { heading: "", sub: "" };
 
   // Show sign-out when user is already authenticated (step 2+, or complete mode)
   const showSignOut = isComplete || step > 1;
@@ -311,23 +326,27 @@ function RegisterContent() {
         {/* Body */}
         <div style={{ padding: "16px 24px" }}>
 
-          <h2 style={{
-            fontFamily: "var(--font-display, 'Big Shoulders Display', sans-serif)",
-            fontSize: "36px", fontWeight: 900, textTransform: "uppercase",
-            letterSpacing: "-1px", lineHeight: 1, color: "var(--text)",
-            marginBottom: "4px",
-          }}>
-            {heading}
-          </h2>
-          <p style={{
-            fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
-            fontSize: "10px", color: "var(--dim)", letterSpacing: "2px",
-            textTransform: "uppercase", marginBottom: "16px",
-          }}>
-            {sub}
-          </p>
+          {step !== 4 && (
+            <>
+              <h2 style={{
+                fontFamily: "var(--font-display, 'Big Shoulders Display', sans-serif)",
+                fontSize: "36px", fontWeight: 900, textTransform: "uppercase",
+                letterSpacing: "-1px", lineHeight: 1, color: "var(--text)",
+                marginBottom: "4px",
+              }}>
+                {heading}
+              </h2>
+              <p style={{
+                fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+                fontSize: "10px", color: "var(--dim)", letterSpacing: "2px",
+                textTransform: "uppercase", marginBottom: "16px",
+              }}>
+                {sub}
+              </p>
+            </>
+          )}
 
-          {error && <div style={errorStyle}>{error}</div>}
+          {step !== 4 && error && <div style={errorStyle}>{error}</div>}
 
           {/* ── Step 1: credentials (email/password path only) ── */}
           {step === 1 && (
@@ -540,9 +559,38 @@ function RegisterContent() {
               </div>
             </>
           )}
+
+          {/* ── Step 4: email verification pending ── */}
+          {step === 4 && (
+            <div style={{ textAlign: "center", padding: "16px 0 8px" }}>
+              <div style={{ fontSize: "40px", marginBottom: "16px", lineHeight: 1 }}>&#9993;</div>
+              <div style={{
+                fontFamily: "var(--font-display, 'Big Shoulders Display', sans-serif)",
+                fontSize: "28px", fontWeight: 900, textTransform: "uppercase",
+                letterSpacing: "-1px", color: "var(--text)", marginBottom: "8px",
+              }}>Check Your Email</div>
+              <div style={{
+                fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+                fontSize: "10px", color: "var(--dim)", letterSpacing: "1.5px",
+                lineHeight: 1.7, marginBottom: "24px",
+              }}>
+                We sent a verification link to{" "}
+                <span style={{ color: "var(--text)" }}>{form.email}</span>.
+                <br />
+                Click the link to confirm your account and continue setup.
+              </div>
+              <div style={{
+                fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+                fontSize: "9px", color: "var(--dim)", letterSpacing: "1px", opacity: 0.6,
+              }}>
+                Didn&apos;t receive it? Check your spam folder.
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Progress bar */}
+        {/* Progress bar — only for steps 1–3 */}
+        {step <= 3 && (
         <div style={{ display: "flex", gap: "2px", padding: "10px 24px", borderTop: "1px solid var(--border)" }}>
           {(isComplete ? [2, 3] : [1, 2, 3]).map((s) => (
             <div key={s} style={{
@@ -552,6 +600,7 @@ function RegisterContent() {
             }} />
           ))}
         </div>
+        )}
 
       </div>
     </div>

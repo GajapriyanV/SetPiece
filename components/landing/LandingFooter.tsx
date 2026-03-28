@@ -1,11 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-
-const NAV_LINKS = [
-  { label: "Contact Us", href: null },
-];
+import ContactModal from "@/components/ContactModal";
 
 const SOCIAL_LINKS = [
   { label: "Twitter/X", href: "https://x.com/setpieceapp" },
@@ -14,7 +12,11 @@ const SOCIAL_LINKS = [
 ];
 
 export default function LandingFooter() {
+  const [showContact, setShowContact] = useState(false);
+
   return (
+    <>
+      {showContact && <ContactModal onClose={() => setShowContact(false)} />}
     <footer
       style={{
         borderTop: "1px solid var(--border)",
@@ -30,24 +32,25 @@ export default function LandingFooter() {
       </div>
 
       <div style={{ display: "flex", gap: "24px" }}>
-        {NAV_LINKS.map(({ label, href }) => (
-          <span
-            key={label}
-            style={{
-              fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
-              fontSize: "10px",
-              color: "var(--dim)",
-              letterSpacing: "1.5px",
-              textTransform: "uppercase",
-              transition: "color 0.2s",
-              cursor: "default",
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text)")}
-            onMouseLeave={(e) => (e.currentTarget.style.color = "var(--dim)")}
-          >
-            {label}
-          </span>
-        ))}
+        <button
+          onClick={() => setShowContact(true)}
+          style={{
+            fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+            fontSize: "10px",
+            color: "var(--dim)",
+            letterSpacing: "1.5px",
+            textTransform: "uppercase",
+            transition: "color 0.2s",
+            cursor: "pointer",
+            background: "transparent",
+            border: "none",
+            padding: 0,
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text)")}
+          onMouseLeave={(e) => (e.currentTarget.style.color = "var(--dim)")}
+        >
+          Contact Us
+        </button>
         <div style={{ width: "1px", background: "var(--border2)", alignSelf: "stretch" }} />
         {SOCIAL_LINKS.map(({ label, href }) => (
           <Link
@@ -83,5 +86,6 @@ export default function LandingFooter() {
         © 2026 SetPiece
       </div>
     </footer>
+    </>
   );
 }

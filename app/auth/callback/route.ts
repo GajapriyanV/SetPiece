@@ -23,6 +23,17 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${origin}/?error=no_user`);
   }
 
+  // Handle email change confirmation — skip onboarding check entirely
+  const type = searchParams.get("type");
+  if (type === "email_change") {
+    return NextResponse.redirect(`${origin}/profile?emailChanged=true`);
+  }
+
+  // Password reset — go straight to reset page, skip onboarding check
+  if (next.startsWith("/reset-password")) {
+    return NextResponse.redirect(`${origin}/reset-password`);
+  }
+
   // Use the explicit onboarding flag — never infer from partial data
   if (user.user_metadata?.onboarding_complete === true) {
     return NextResponse.redirect(`${origin}${next}`);

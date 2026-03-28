@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import EditProfileModal from "@/components/profile/EditProfileModal";
 
@@ -34,6 +35,8 @@ interface UserProfile {
   debates: Debate[];
   username_changed_at: string | null;
   avatar_url: string | null;
+  upvotes_received: number;
+  mvp_count: number;
 }
 
 // ── Ticker ────────────────────────────────────────────────────────────────────
@@ -206,9 +209,12 @@ function DebateRow({ debate }: { debate: Debate }) {
 
 export default function ProfilePage() {
   const ref = useRef<HTMLDivElement>(null);
+  const searchParams = useSearchParams();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [showEdit, setShowEdit] = useState(false);
+  const [openEmailSection, setOpenEmailSection] = useState(false);
+  const [emailChanged, setEmailChanged] = useState(false);
 
   useEffect(() => {
     fetch("/api/profile/me")
@@ -216,8 +222,16 @@ export default function ProfilePage() {
       .then((data) => {
         setProfile(data);
         setLoading(false);
+        if (searchParams.get("action") === "change-email") {
+          setOpenEmailSection(true);
+          setShowEdit(true);
+        }
+        if (searchParams.get("emailChanged") === "true") {
+          setEmailChanged(true);
+        }
       })
       .catch(() => setLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -243,14 +257,42 @@ export default function ProfilePage() {
       {showEdit && profile && (
         <EditProfileModal
           initial={{ name: profile.name, username: profile.username, country: profile.country, club: profile.club, username_changed_at: profile.username_changed_at, avatar_url: profile.avatar_url }}
-          onClose={() => setShowEdit(false)}
+          onClose={() => { setShowEdit(false); setOpenEmailSection(false); }}
           onSaved={(updated) => {
             setProfile((p) => p ? { ...p, ...updated } : p);
             setShowEdit(false);
+            setOpenEmailSection(false);
           }}
+          openEmailSection={openEmailSection}
         />
       )}
       <div ref={ref}>
+
+        {/* ── Email changed banner ── */}
+        {emailChanged && (
+          <div style={{
+            background: "rgba(0,255,135,0.08)",
+            border: "1px solid rgba(0,255,135,0.3)",
+            borderRadius: "4px",
+            padding: "14px 20px",
+            margin: "0 auto 24px",
+            maxWidth: "1100px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "12px",
+          }}>
+            <span style={{ color: "var(--g)", fontFamily: "var(--font-mono)", fontSize: "13px" }}>
+              ✓ Email address updated successfully.
+            </span>
+            <button
+              onClick={() => setEmailChanged(false)}
+              style={{ background: "none", border: "none", cursor: "pointer", color: "var(--dim)", fontSize: "16px", lineHeight: 1 }}
+            >
+              ×
+            </button>
+          </div>
+        )}
 
         {/* ── Profile Header ── */}
         <div style={{
@@ -430,36 +472,12 @@ export default function ProfilePage() {
                 {/* ── Stats strip ── */}
                 <div className="rv" style={{
                   display: "grid",
-                  gridTemplateColumns: "1fr 1fr 1fr",
+                  gridTemplateColumns: "1fr 1fr 1fr 1fr",
                   gap: "1px",
                   background: "var(--border)",
                   border: "1px solid var(--border)",
                   borderBottom: "none",
                 }}>
-                  {/* ELO Rating */}
-                  <div style={{ background: "var(--dark2)", padding: "22px 28px" }}>
-                    <div style={{
-                      fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
-                      fontSize: "9px",
-                      letterSpacing: "3px",
-                      textTransform: "uppercase",
-                      color: "var(--dim)",
-                      marginBottom: "8px",
-                    }}>ELO Rating</div>
-                    <div style={{ display: "flex", alignItems: "baseline", gap: "10px" }}>
-                      <div style={{
-                        fontFamily: "var(--font-display, 'Big Shoulders Display', sans-serif)",
-                        fontSize: "clamp(40px, 5vw, 64px)",
-                        fontWeight: 900,
-                        letterSpacing: "-2px",
-                        lineHeight: 1,
-                        color: "var(--g)",
-                      }}>
-                        {profile.elo.toLocaleString()}
-                      </div>
-                    </div>
-                  </div>
-
                   {/* Global Rank */}
                   <div style={{ background: "var(--dark2)", padding: "22px 28px" }}>
                     <div style={{
@@ -473,7 +491,7 @@ export default function ProfilePage() {
                     <div style={{ display: "flex", alignItems: "baseline", gap: "6px" }}>
                       <div style={{
                         fontFamily: "var(--font-display, 'Big Shoulders Display', sans-serif)",
-                        fontSize: "clamp(40px, 5vw, 64px)",
+                        fontSize: "clamp(32px, 4vw, 56px)",
                         fontWeight: 900,
                         letterSpacing: "-2px",
                         lineHeight: 1,
@@ -504,7 +522,7 @@ export default function ProfilePage() {
                     }}>Win Rate</div>
                     <div style={{
                       fontFamily: "var(--font-display, 'Big Shoulders Display', sans-serif)",
-                      fontSize: "clamp(40px, 5vw, 64px)",
+                      fontSize: "clamp(32px, 4vw, 56px)",
                       fontWeight: 900,
                       letterSpacing: "-2px",
                       lineHeight: 1,
@@ -526,6 +544,50 @@ export default function ProfilePage() {
                       }}>
                         {profile.wins}W · {profile.losses}L
                       </div>
+                    </div>
+                  </div>
+
+                  {/* MVPs */}
+                  <div style={{ background: "var(--dark2)", padding: "22px 28px" }}>
+                    <div style={{
+                      fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+                      fontSize: "9px",
+                      letterSpacing: "3px",
+                      textTransform: "uppercase",
+                      color: "var(--dim)",
+                      marginBottom: "8px",
+                    }}>MVPs</div>
+                    <div style={{
+                      fontFamily: "var(--font-display, 'Big Shoulders Display', sans-serif)",
+                      fontSize: "clamp(32px, 4vw, 56px)",
+                      fontWeight: 900,
+                      letterSpacing: "-2px",
+                      lineHeight: 1,
+                      color: "#ffc800",
+                    }}>
+                      {(profile.mvp_count ?? 0).toLocaleString()}
+                    </div>
+                  </div>
+
+                  {/* Total Upvotes */}
+                  <div style={{ background: "var(--dark2)", padding: "22px 28px" }}>
+                    <div style={{
+                      fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+                      fontSize: "9px",
+                      letterSpacing: "3px",
+                      textTransform: "uppercase",
+                      color: "var(--dim)",
+                      marginBottom: "8px",
+                    }}>Total Upvotes</div>
+                    <div style={{
+                      fontFamily: "var(--font-display, 'Big Shoulders Display', sans-serif)",
+                      fontSize: "clamp(32px, 4vw, 56px)",
+                      fontWeight: 900,
+                      letterSpacing: "-2px",
+                      lineHeight: 1,
+                      color: "var(--text)",
+                    }}>
+                      {(profile.upvotes_received ?? 0).toLocaleString()}
                     </div>
                   </div>
                 </div>

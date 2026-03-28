@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import EditProfileModal from "@/components/profile/EditProfileModal";
@@ -208,6 +208,14 @@ function DebateRow({ debate }: { debate: Debate }) {
 // ── Main Page ──────────────────────────────────────────────────────────────────
 
 export default function ProfilePage() {
+  return (
+    <Suspense>
+      <ProfileContent />
+    </Suspense>
+  );
+}
+
+function ProfileContent() {
   const ref = useRef<HTMLDivElement>(null);
   const searchParams = useSearchParams();
   const [profile, setProfile] = useState<UserProfile | null>(null);

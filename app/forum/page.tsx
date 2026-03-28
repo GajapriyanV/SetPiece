@@ -415,7 +415,7 @@ export default function ForumPage() {
                 <span style={{ fontFamily: "var(--font-mono, 'Roboto Mono', monospace)", fontSize: "8px", letterSpacing: "2px", textTransform: "uppercase", color: "#ffc800", background: "rgba(255,200,0,0.12)", padding: "3px 10px" }}>
                   Top Thread This Week
                 </span>
-                <span style={{ fontFamily: "var(--font-mono, 'Roboto Mono', monospace)", fontSize: "8px", letterSpacing: "2px", textTransform: "uppercase", color: "var(--dim)", border: "1px solid rgba(0,255,135,0.3)", padding: "2px 8px", color: "var(--g)" }}>
+                <span style={{ fontFamily: "var(--font-mono, 'Roboto Mono', monospace)", fontSize: "8px", letterSpacing: "2px", textTransform: "uppercase", border: "1px solid rgba(0,255,135,0.3)", padding: "2px 8px", color: "var(--g)" }}>
                   {data.topThread.flair}
                 </span>
               </div>

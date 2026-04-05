@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("id, username, wins, losses, draws, debates_count, elo, country")
+    .select("id, username, wins, losses, draws, debates_count, elo, country, created_at")
     .eq("id", user.id)
     .single();
 
@@ -37,10 +37,18 @@ export async function GET(req: NextRequest) {
     const total = myWins + myLosses + myDraws;
     const winPct = total > 0 ? Math.round((myWins / total) * 100) : 0;
 
+    const myDebatesCount = profile.debates_count ?? 0;
+    const myCreatedAt = profile.created_at;
+
     let countQuery = supabase
       .from("profiles")
       .select("*", { count: "exact", head: true })
-      .gt("wins", myWins);
+      .or(
+        `wins.gt.${myWins},` +
+        `and(wins.eq.${myWins},losses.lt.${myLosses}),` +
+        `and(wins.eq.${myWins},losses.eq.${myLosses},debates_count.gt.${myDebatesCount}),` +
+        `and(wins.eq.${myWins},losses.eq.${myLosses},debates_count.eq.${myDebatesCount},created_at.lt.${myCreatedAt})`
+      );
 
     if (section === "regional" && userCountry) {
       countQuery = countQuery.eq("country", userCountry);
@@ -93,16 +101,30 @@ export async function GET(req: NextRequest) {
     : 0;
 
   // Rank against ALL profiles (including non-debaters), filtered by country if regional
-  let allProfilesQuery = supabase.from("profiles").select("id");
+  let allProfilesQuery = supabase.from("profiles").select("id, created_at");
   if (section === "regional" && userCountry) {
     allProfilesQuery = allProfilesQuery.eq("country", userCountry);
   }
   const { data: allProfiles } = await allProfilesQuery;
-  const allIds = (allProfiles ?? []).map((p) => p.id);
 
-  // Rank = count of users with strictly more season wins
-  const rank =
-    allIds.filter((id) => (stats[id]?.wins ?? 0) > mySeasonStats.wins).length + 1;
+  const myW = mySeasonStats.wins;
+  const myL = mySeasonStats.losses;
+  const myD = mySeasonStats.wins + mySeasonStats.losses + mySeasonStats.draws;
+  const myTs = profile.created_at ?? "";
+
+  // Rank = count of users strictly ahead using same tiebreaker as leaderboard:
+  // wins↓ → losses↑ → debates_count↓ → created_at↑
+  const rank = (allProfiles ?? []).filter((p) => {
+    const s = stats[p.id] ?? { wins: 0, losses: 0, draws: 0 };
+    const theirW = s.wins;
+    const theirL = s.losses;
+    const theirD = s.wins + s.losses + s.draws;
+    const theirTs = (p.created_at as string) ?? "";
+    if (theirW !== myW) return theirW > myW;
+    if (theirL !== myL) return theirL < myL;
+    if (theirD !== myD) return theirD > myD;
+    return theirTs < myTs;
+  }).length + 1;
 
   return NextResponse.json({
     userId: user.id,

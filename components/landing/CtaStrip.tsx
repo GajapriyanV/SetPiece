@@ -1,20 +1,21 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import SignInModal from "@/components/auth/SignInModal";
 import { createClient } from "@/utils/supabase/client";
 
 const QUICK_LINKS = [
-  { label: "Watch a live debate", sub: "See how it works in real time", href: "#debates", icon: "▶" },
-  { label: "View leaderboard", sub: "Top ranked debaters this season", href: "#leaderboard", icon: "↑" },
-  { label: "Browse topics", sub: "Find a debate to join or judge", href: "#debates", icon: "→" },
+  { label: "Watch a live debate", sub: "See how it works in real time", anchor: "debates", href: null, icon: "▶" },
+  { label: "View leaderboard", sub: "Top ranked debaters this season", anchor: "leaderboard", href: null, icon: "🏆" },
+  { label: "Browse topics", sub: "Find a debate to join or judge", anchor: null, href: "/rooms", icon: "→" },
+  { label: "Join the discussion", sub: "Post takes, reply to debates, earn MVPs", anchor: null, href: "/forum", icon: "💬" },
 ];
 
 export default function CtaStrip() {
   const ref = useRef<HTMLDivElement>(null);
   const router = useRouter();
+  const pathname = usePathname();
   const supabase = createClient();
   const [showSignIn, setShowSignIn] = useState(false);
   const [user, setUser] = useState<unknown>(null);
@@ -26,6 +27,18 @@ export default function CtaStrip() {
     });
     return () => subscription.unsubscribe();
   }, [supabase.auth]);
+
+  const handleQuickLink = (anchor: string | null, href: string | null) => {
+    if (href) { router.push(href); return; }
+    if (anchor) {
+      if (pathname === "/") {
+        document.getElementById(anchor)?.scrollIntoView({ behavior: "smooth" });
+        window.history.pushState(null, "", `/#${anchor}`);
+      } else {
+        router.push(`/#${anchor}`);
+      }
+    }
+  };
 
   const handleEnterPitch = () => {
     if (user) {
@@ -185,19 +198,24 @@ export default function CtaStrip() {
 
             <div style={{ display: "flex", flexDirection: "column", gap: "0" }}>
               {QUICK_LINKS.map((link, i) => (
-                <Link
+                <button
                   key={i}
-                  href={link.href}
+                  onClick={() => handleQuickLink(link.anchor, link.href)}
                   style={{
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "space-between",
                     padding: "20px 0",
-                    borderTop: i === 0 ? "1px solid var(--border)" : "none",
-                    borderBottom: "1px solid var(--border)",
                     textDecoration: "none",
                     transition: "all 0.2s",
                     gap: "16px",
+                    background: "transparent",
+                    border: "none",
+                    borderBottom: "1px solid var(--border)",
+                    borderTop: i === 0 ? "1px solid var(--border)" : "none",
+                    cursor: "pointer",
+                    width: "100%",
+                    textAlign: "left",
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.paddingLeft = "8px";
@@ -253,7 +271,7 @@ export default function CtaStrip() {
                   }}>
                     →
                   </div>
-                </Link>
+                </button>
               ))}
             </div>
           </div>

@@ -26,7 +26,7 @@ export async function GET() {
   // ── Profile ───────────────────────────────────────────────────────────────────
   const { data: profile } = await supabase
     .from("profiles")
-    .select("id, username, name, country, club, elo, wins, losses, draws, debates_count, username_changed_at, avatar_url")
+    .select("id, username, name, country, club, elo, wins, losses, draws, debates_count, username_changed_at, avatar_url, upvotes_received, mvp_count")
     .eq("id", user.id)
     .single();
 
@@ -34,12 +34,21 @@ export async function GET() {
     return NextResponse.json({ error: "Profile not found" }, { status: 404 });
   }
 
-  // ── Global rank ───────────────────────────────────────────────────────────────
+  // ── Global rank (matches leaderboard tiebreaker: wins↓ losses↑ debates_count↓ created_at↑) ──
   const myWins = profile.wins ?? 0;
+  const myLosses = profile.losses ?? 0;
+  const myDebatesCount = profile.debates_count ?? 0;
+  const myCreatedAt = user.created_at;
+
   const { count: aboveCount } = await supabase
     .from("profiles")
     .select("*", { count: "exact", head: true })
-    .gt("wins", myWins);
+    .or(
+      `wins.gt.${myWins},` +
+      `and(wins.eq.${myWins},losses.lt.${myLosses}),` +
+      `and(wins.eq.${myWins},losses.eq.${myLosses},debates_count.gt.${myDebatesCount}),` +
+      `and(wins.eq.${myWins},losses.eq.${myLosses},debates_count.eq.${myDebatesCount},created_at.lt.${myCreatedAt})`
+    );
   const rank = (aboveCount ?? 0) + 1;
 
   const { count: totalDebaters } = await supabase
@@ -103,6 +112,8 @@ export async function GET() {
     joinDate,
     username_changed_at: profile.username_changed_at ?? null,
     avatar_url: profile.avatar_url ?? null,
+    upvotes_received: profile.upvotes_received ?? 0,
+    mvp_count: profile.mvp_count ?? 0,
     debates: debateHistory,
   });
 }

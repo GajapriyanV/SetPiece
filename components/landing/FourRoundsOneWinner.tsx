@@ -21,7 +21,7 @@ const STEPS = [
   {
     num: "04",
     name: "Earn Your Rank",
-    desc: "Elo rating system updates after every result. Win and climb. Lose and drop. Your record is permanent.",
+    desc: "Every debate ends with a winner. Win and climb the global rankings. Lose and drop. Your record is permanent.",
   },
 ];
 

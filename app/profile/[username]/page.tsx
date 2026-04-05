@@ -33,6 +33,8 @@ interface UserProfile {
   totalDebaters: number;
   debates: Debate[];
   avatar_url: string | null;
+  upvotes_received: number;
+  mvp_count: number;
 }
 
 // ── Ticker ────────────────────────────────────────────────────────────────────
@@ -403,33 +405,12 @@ export default function PublicProfilePage() {
 
                 {/* ── Stats strip ── */}
                 <div className="rv r-profile-stats" style={{
+                  gridTemplateColumns: "1fr 1fr 1fr 1fr",
                   gap: "1px",
                   background: "var(--border)",
                   border: "1px solid var(--border)",
                   borderBottom: "none",
                 }}>
-                  {/* ELO Rating */}
-                  <div style={{ background: "var(--dark2)", padding: "22px 28px" }}>
-                    <div style={{
-                      fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
-                      fontSize: "9px",
-                      letterSpacing: "3px",
-                      textTransform: "uppercase",
-                      color: "var(--dim)",
-                      marginBottom: "8px",
-                    }}>ELO Rating</div>
-                    <div style={{
-                      fontFamily: "var(--font-display, 'Big Shoulders Display', sans-serif)",
-                      fontSize: "clamp(40px, 5vw, 64px)",
-                      fontWeight: 900,
-                      letterSpacing: "-2px",
-                      lineHeight: 1,
-                      color: "var(--g)",
-                    }}>
-                      {profile.elo.toLocaleString()}
-                    </div>
-                  </div>
-
                   {/* Global Rank */}
                   <div style={{ background: "var(--dark2)", padding: "22px 28px" }}>
                     <div style={{
@@ -443,7 +424,7 @@ export default function PublicProfilePage() {
                     <div style={{ display: "flex", alignItems: "baseline", gap: "6px" }}>
                       <div style={{
                         fontFamily: "var(--font-display, 'Big Shoulders Display', sans-serif)",
-                        fontSize: "clamp(40px, 5vw, 64px)",
+                        fontSize: "clamp(32px, 4vw, 56px)",
                         fontWeight: 900,
                         letterSpacing: "-2px",
                         lineHeight: 1,
@@ -474,7 +455,7 @@ export default function PublicProfilePage() {
                     }}>Win Rate</div>
                     <div style={{
                       fontFamily: "var(--font-display, 'Big Shoulders Display', sans-serif)",
-                      fontSize: "clamp(40px, 5vw, 64px)",
+                      fontSize: "clamp(32px, 4vw, 56px)",
                       fontWeight: 900,
                       letterSpacing: "-2px",
                       lineHeight: 1,
@@ -496,6 +477,50 @@ export default function PublicProfilePage() {
                       }}>
                         {profile.wins}W · {profile.losses}L
                       </div>
+                    </div>
+                  </div>
+
+                  {/* MVPs */}
+                  <div style={{ background: "var(--dark2)", padding: "22px 28px" }}>
+                    <div style={{
+                      fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+                      fontSize: "9px",
+                      letterSpacing: "3px",
+                      textTransform: "uppercase",
+                      color: "var(--dim)",
+                      marginBottom: "8px",
+                    }}>MVPs</div>
+                    <div style={{
+                      fontFamily: "var(--font-display, 'Big Shoulders Display', sans-serif)",
+                      fontSize: "clamp(32px, 4vw, 56px)",
+                      fontWeight: 900,
+                      letterSpacing: "-2px",
+                      lineHeight: 1,
+                      color: "#ffc800",
+                    }}>
+                      {(profile.mvp_count ?? 0).toLocaleString()}
+                    </div>
+                  </div>
+
+                  {/* Total Upvotes */}
+                  <div style={{ background: "var(--dark2)", padding: "22px 28px" }}>
+                    <div style={{
+                      fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+                      fontSize: "9px",
+                      letterSpacing: "3px",
+                      textTransform: "uppercase",
+                      color: "var(--dim)",
+                      marginBottom: "8px",
+                    }}>Total Upvotes</div>
+                    <div style={{
+                      fontFamily: "var(--font-display, 'Big Shoulders Display', sans-serif)",
+                      fontSize: "clamp(32px, 4vw, 56px)",
+                      fontWeight: 900,
+                      letterSpacing: "-2px",
+                      lineHeight: 1,
+                      color: "var(--text)",
+                    }}>
+                      {(profile.upvotes_received ?? 0).toLocaleString()}
                     </div>
                   </div>
                 </div>

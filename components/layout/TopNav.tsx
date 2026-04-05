@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import SignInModal from "@/components/auth/SignInModal";
 import Image from "next/image";
 import { createClient } from "@/utils/supabase/client";
 import type { User } from "@supabase/supabase-js";
+import NotificationBell from "@/components/layout/NotificationBell";
 
 export default function TopNav() {
   const pathname = usePathname();
@@ -16,10 +17,14 @@ export default function TopNav() {
   const [user, setUser] = useState<User | null>(null);
   const [profileUsername, setProfileUsername] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [showAdminMenu, setShowAdminMenu] = useState(false);
+  const adminMenuRef = useRef<HTMLDivElement>(null);
 
   const fetchProfileUsername = async (userId: string) => {
-    const { data } = await supabase.from("profiles").select("username").eq("id", userId).single();
+    const { data } = await supabase.from("profiles").select("username, is_admin").eq("id", userId).single();
     if (data?.username) setProfileUsername(data.username);
+    if (data?.is_admin) setIsAdmin(true);
   };
 
   useEffect(() => {
@@ -42,9 +47,20 @@ export default function TopNav() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (adminMenuRef.current && !adminMenuRef.current.contains(e.target as Node)) {
+        setShowAdminMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     setUser(null);
+    setIsAdmin(false);
     router.push("/");
   };
 
@@ -96,6 +112,7 @@ export default function TopNav() {
         {[
           { label: "Debates",  href: "/#debates",  anchor: "debates"  },
           { label: "Format",   href: "/#format",   anchor: "format"   },
+          { label: "The Pitch", href: "/forum",     anchor: null       },
           { label: "Rankings", href: "/rankings",  anchor: null       },
         ].map(({ label, href, anchor }) => {
           const isActive = href.startsWith("/") && !href.startsWith("/#") && pathname === href;
@@ -149,6 +166,68 @@ export default function TopNav() {
       <div className="r-nav-right">
         {user ? (
           <>
+            {isAdmin && (
+              <div ref={adminMenuRef} style={{ position: "relative" }}>
+                <button
+                  onClick={() => setShowAdminMenu((o) => !o)}
+                  style={{
+                    fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+                    fontSize: "9px", letterSpacing: "2px", textTransform: "uppercase",
+                    color: showAdminMenu ? "var(--g)" : "var(--dim)",
+                    background: "transparent", border: "1px solid var(--border)",
+                    padding: "5px 10px", cursor: "pointer", transition: "all 0.15s",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.color = "var(--g)";
+                    e.currentTarget.style.borderColor = "rgba(0,255,135,0.3)";
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!showAdminMenu) {
+                      e.currentTarget.style.color = "var(--dim)";
+                      e.currentTarget.style.borderColor = "var(--border)";
+                    }
+                  }}
+                >
+                  Admin ▾
+                </button>
+                {showAdminMenu && (
+                  <div style={{
+                    position: "absolute", top: "calc(100% + 10px)", right: 0,
+                    background: "var(--dark2)", border: "1px solid var(--border)",
+                    minWidth: "160px", zIndex: 600, boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
+                  }}>
+                    {[
+                      { label: "Reports", href: "/admin/reports" },
+                      { label: "Support Tickets", href: "/admin/contact" },
+                    ].map(({ label, href }) => (
+                      <Link
+                        key={href}
+                        href={href}
+                        onClick={() => setShowAdminMenu(false)}
+                        style={{
+                          display: "block", padding: "11px 16px",
+                          fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+                          fontSize: "9px", letterSpacing: "2px", textTransform: "uppercase",
+                          color: "var(--dim)", textDecoration: "none",
+                          borderBottom: "1px solid var(--border)", transition: "all 0.15s",
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.color = "var(--text)";
+                          e.currentTarget.style.background = "rgba(255,255,255,0.03)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.color = "var(--dim)";
+                          e.currentTarget.style.background = "transparent";
+                        }}
+                      >
+                        {label}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            <NotificationBell />
             <Link
               href="/profile"
               style={{
@@ -254,6 +333,7 @@ export default function TopNav() {
       {[
         { label: "Debates", href: "/rooms" },
         { label: "Format", href: "/#format" },
+        { label: "The Pitch", href: "/forum" },
         { label: "Rankings", href: "/rankings" },
       ].map(({ label, href }) => (
         <Link key={label} href={href} onClick={() => setDrawerOpen(false)}>

@@ -107,7 +107,7 @@ export default function SignInModal({ onClose, onRegister }: SignInModalProps) {
     }
     setLoading(true);
     const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
-      redirectTo: `${window.location.origin}/reset-password`,
+      redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
     });
     setLoading(false);
     if (error) {

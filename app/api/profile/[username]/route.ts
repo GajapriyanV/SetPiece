@@ -11,7 +11,7 @@ export async function GET(
   // ── Profile ───────────────────────────────────────────────────────────────────
   const { data: profile } = await supabase
     .from("profiles")
-    .select("id, username, name, country, club, elo, wins, losses, draws, debates_count, avatar_url, created_at")
+    .select("id, username, name, country, club, elo, wins, losses, draws, debates_count, avatar_url, created_at, upvotes_received, mvp_count")
     .eq("username", username)
     .single();
 
@@ -87,6 +87,8 @@ export async function GET(
     totalDebaters: totalDebaters ?? 0,
     joinDate,
     avatar_url: profile.avatar_url ?? null,
+    upvotes_received: profile.upvotes_received ?? 0,
+    mvp_count: profile.mvp_count ?? 0,
     debates: debateHistory,
   });
 }

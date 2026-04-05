@@ -21,9 +21,10 @@ interface EditProfileModalProps {
   };
   onClose: () => void;
   onSaved: (updated: { name: string; username: string; country: string | null; club: string | null; username_changed_at: string | null; avatar_url: string | null }) => void;
+  openEmailSection?: boolean;
 }
 
-export default function EditProfileModal({ initial, onClose, onSaved }: EditProfileModalProps) {
+export default function EditProfileModal({ initial, onClose, onSaved, openEmailSection }: EditProfileModalProps) {
   const supabase = createClient();
   const overlayRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -43,6 +44,12 @@ export default function EditProfileModal({ initial, onClose, onSaved }: EditProf
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(initial.avatar_url);
   const [avatarError, setAvatarError] = useState("");
+
+  const [currentEmail, setCurrentEmail] = useState("");
+  const [newEmail, setNewEmail] = useState("");
+  const [showEmailChange, setShowEmailChange] = useState(false);
+  const [emailStatus, setEmailStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [emailError, setEmailError] = useState("");
   const [avatarHovered, setAvatarHovered] = useState(false);
 
   const COOLDOWN_MS = 14 * 24 * 60 * 60 * 1000; // 2 weeks
@@ -68,6 +75,14 @@ export default function EditProfileModal({ initial, onClose, onSaved }: EditProf
       .maybeSingle();
     setUsernameError(data ? "Username already taken" : "");
   };
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user?.email) setCurrentEmail(user.email);
+    });
+    if (openEmailSection) setShowEmailChange(true);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Lock body scroll
   useEffect(() => {
@@ -102,6 +117,22 @@ export default function EditProfileModal({ initial, onClose, onSaved }: EditProf
     setAvatarError("");
     setAvatarFile(file);
     setAvatarPreview(URL.createObjectURL(file));
+  };
+
+  const handleEmailChange = async () => {
+    setEmailError("");
+    if (!newEmail.trim() || newEmail.trim() === currentEmail) {
+      setEmailError("Enter a different email address.");
+      return;
+    }
+    setEmailStatus("sending");
+    const { error } = await supabase.auth.updateUser({ email: newEmail.trim() });
+    if (error) {
+      setEmailError(error.message);
+      setEmailStatus("error");
+      return;
+    }
+    setEmailStatus("sent");
   };
 
   const handleSave = async () => {
@@ -483,6 +514,97 @@ export default function EditProfileModal({ initial, onClose, onSaved }: EditProf
               onBlur={() => setFocused("")}
               subtitleMap={CLUB_LEAGUE_MAP}
             />
+          </div>
+
+          {/* Email */}
+          <div style={{ marginBottom: "10px", borderTop: "1px solid var(--border)", paddingTop: "20px" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: showEmailChange ? "10px" : 0 }}>
+              <div>
+                <div style={labelStyle}>Email</div>
+                <div style={{
+                  fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+                  fontSize: "11px", color: "var(--text)", letterSpacing: "0.5px",
+                }}>
+                  {currentEmail || "—"}
+                </div>
+              </div>
+              {!showEmailChange && emailStatus !== "sent" && (
+                <button
+                  type="button"
+                  onClick={() => setShowEmailChange(true)}
+                  style={{
+                    background: "transparent", border: "1px solid var(--border2)", borderRadius: "2px",
+                    color: "var(--dim)", fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+                    fontSize: "9px", letterSpacing: "2px", textTransform: "uppercase",
+                    padding: "6px 12px", cursor: "pointer", transition: "all 0.2s",
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--g)"; e.currentTarget.style.color = "var(--g)"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--border2)"; e.currentTarget.style.color = "var(--dim)"; }}
+                >
+                  Change
+                </button>
+              )}
+              {emailStatus === "sent" && (
+                <span style={{ fontFamily: "var(--font-mono, 'Roboto Mono', monospace)", fontSize: "9px", color: "var(--g)", letterSpacing: "1.5px" }}>
+                  Confirmation sent ✓
+                </span>
+              )}
+            </div>
+
+            {showEmailChange && emailStatus !== "sent" && (
+              <div style={{ display: "flex", gap: "8px", alignItems: "flex-start", flexDirection: "column" }}>
+                <input
+                  type="email"
+                  value={newEmail}
+                  onChange={(e) => { setNewEmail(e.target.value); setEmailError(""); }}
+                  placeholder="New email address"
+                  style={{
+                    width: "100%", padding: "10px 12px",
+                    background: "var(--dark2)", border: "1px solid var(--border2)",
+                    borderRadius: "2px", outline: "none", color: "var(--text)",
+                    fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+                    fontSize: "12px", letterSpacing: "0.5px",
+                  }}
+                />
+                {emailError && (
+                  <div style={{ fontFamily: "var(--font-mono, 'Roboto Mono', monospace)", fontSize: "9px", color: "var(--red)", letterSpacing: "1px" }}>
+                    {emailError}
+                  </div>
+                )}
+                <div style={{ display: "flex", gap: "8px" }}>
+                  <button
+                    type="button"
+                    onClick={handleEmailChange}
+                    disabled={emailStatus === "sending"}
+                    style={{
+                      padding: "8px 16px", background: "var(--g)", color: "#000",
+                      border: "none", borderRadius: "2px",
+                      fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+                      fontSize: "9px", letterSpacing: "2px", textTransform: "uppercase",
+                      fontWeight: 700, cursor: emailStatus === "sending" ? "not-allowed" : "pointer",
+                    }}
+                  >
+                    {emailStatus === "sending" ? "Sending…" : "Send Confirmation"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setShowEmailChange(false); setNewEmail(""); setEmailError(""); setEmailStatus("idle"); }}
+                    style={{
+                      padding: "8px 16px", background: "transparent",
+                      border: "1px solid var(--border2)", borderRadius: "2px",
+                      color: "var(--dim)", fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+                      fontSize: "9px", letterSpacing: "2px", textTransform: "uppercase",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+                <div style={{ fontFamily: "var(--font-mono, 'Roboto Mono', monospace)", fontSize: "8px", color: "var(--dim)", letterSpacing: "1px", lineHeight: 1.5 }}>
+                  A confirmation link will be sent to the new address. Your email won&apos;t change until confirmed.
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Error */}

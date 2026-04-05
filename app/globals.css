@@ -85,7 +85,7 @@ body::after {
 .hero-line-2 {
   display: block;
   color: transparent;
-  -webkit-text-stroke: 1px rgba(236, 236, 236, 0.15);
+  -webkit-text-stroke: 1px rgba(236, 236, 236, 0.45);
   opacity: 0;
   animation: fu 0.7s ease forwards 0.35s;
 }

@@ -278,10 +278,10 @@ export default function ProfilePage() {
             PROFILE
           </div>
 
-          <div style={{
+          <div className="r-pad" style={{
             maxWidth: "1400px",
             margin: "0 auto",
-            padding: "56px 40px 0",
+            paddingTop: "56px",
             position: "relative",
             zIndex: 1,
           }}>
@@ -299,10 +299,7 @@ export default function ProfilePage() {
             ) : profile ? (
               <>
                 {/* Top row: avatar + info + edit button */}
-                <div className="rv" style={{
-                  display: "flex",
-                  alignItems: "flex-start",
-                  gap: "28px",
+                <div className="rv r-profile-header" style={{
                   paddingBottom: "40px",
                 }}>
                   {/* Avatar */}
@@ -428,9 +425,7 @@ export default function ProfilePage() {
                 </div>
 
                 {/* ── Stats strip ── */}
-                <div className="rv" style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr 1fr",
+                <div className="rv r-profile-stats" style={{
                   gap: "1px",
                   background: "var(--border)",
                   border: "1px solid var(--border)",
@@ -547,7 +542,7 @@ export default function ProfilePage() {
 
         {/* ── Debate History ── */}
         {profile && (
-          <div style={{ maxWidth: "1400px", margin: "0 auto", padding: "40px 40px 80px" }}>
+          <div className="r-pad" style={{ maxWidth: "1400px", margin: "0 auto", paddingTop: "40px", paddingBottom: "80px" }}>
 
             {/* Section header */}
             <div className="rv" style={{

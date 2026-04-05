@@ -29,11 +29,11 @@ export default function RoomTopBar({
 
   return (
     <div
+      className="r-pad"
       style={{
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
-        padding: "0 32px",
         height: "52px",
         borderBottom: "1px solid var(--border)",
         background: "var(--dark2)",

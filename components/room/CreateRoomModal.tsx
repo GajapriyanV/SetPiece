@@ -106,6 +106,7 @@ export default function CreateRoomModal({ onClose }: { onClose: () => void }) {
       }}
     >
       <div
+        className="r-modal"
         style={{
           width: "100%",
           maxWidth: "480px",
@@ -179,7 +180,7 @@ export default function CreateRoomModal({ onClose }: { onClose: () => void }) {
           </div>
 
           {/* Sides */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+          <div className="r-modal-inputs" style={{ gap: "16px" }}>
             <div>
               <label
                 style={{

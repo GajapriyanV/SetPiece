@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 export default function HeroCursor() {
+  const { isMobile } = useIsMobile();
   const dotRef = useRef<HTMLDivElement>(null);
   const ringRef = useRef<HTMLDivElement>(null);
 
@@ -35,6 +37,8 @@ export default function HeroCursor() {
       cancelAnimationFrame(rafId);
     };
   }, []);
+
+  if (isMobile) return null;
 
   return (
     <>

@@ -55,17 +55,15 @@ export default function CtaStrip() {
         onClose={() => setShowSignIn(false)}
       />
     )}
-    <section style={{
+    <section className="r-pad r-section-pad" style={{
       padding: "100px 44px",
       background: "var(--dark)",
       borderTop: "1px solid var(--border)",
     }}>
       <div ref={ref} style={{ maxWidth: "1100px", margin: "0 auto" }}>
         <div
-          className="rv"
+          className="rv r-cta-grid"
           style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
             border: "1px solid var(--border)",
             borderRadius: "4px",
             overflow: "hidden",

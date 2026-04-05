@@ -204,3 +204,188 @@ body::after {
   height: 1px;
   background: rgba(0, 255, 135, 0.15);
 }
+
+/* ══════════════════════════════════════════════
+   RESPONSIVE
+   Desktop: >1024 (default)  Tablet: 768-1024  Mobile: <768  Small: <480
+   ══════════════════════════════════════════════ */
+
+/* ── Utility classes ── */
+.r-pad { padding-left: 40px; padding-right: 40px; }
+
+/* ── Mobile nav ── */
+.r-nav-hamburger { display: none; background: none; border: none; cursor: pointer; padding: 8px; }
+.r-nav-links { display: flex; gap: 32px; position: absolute; left: 50%; transform: translateX(-50%); }
+.r-nav-right { display: flex; align-items: center; gap: 10px; }
+.r-nav-drawer {
+  position: fixed; top: 60px; left: 0; right: 0; bottom: 0;
+  background: rgba(6,6,8,0.97); backdrop-filter: blur(24px);
+  z-index: 499; display: flex; flex-direction: column;
+  padding: 32px 24px; gap: 8px;
+  transform: translateX(100%); transition: transform 0.3s ease;
+}
+.r-nav-drawer.open { transform: translateX(0); }
+.r-nav-drawer a, .r-nav-drawer button {
+  font-family: var(--font-mono, 'Roboto Mono', monospace);
+  font-size: 13px; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--dim); text-decoration: none; background: none;
+  border: none; cursor: pointer; padding: 16px 0;
+  border-bottom: 1px solid var(--border); text-align: left;
+  transition: color 0.2s;
+}
+.r-nav-drawer a:hover, .r-nav-drawer button:hover { color: var(--g); }
+.r-nav-drawer .r-drawer-cta {
+  margin-top: 16px; background: var(--g); color: #000;
+  padding: 14px 20px; border-radius: 3px; font-weight: 700;
+  text-align: center; border: none;
+}
+
+/* ── Footer ── */
+.r-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 28px 40px; border-top: 1px solid var(--border); background: var(--dark2);
+}
+
+/* ── Hero stats grid ── */
+.r-hero-stats {
+  display: grid; gap: 1px; background: var(--border); border: 1px solid var(--border);
+}
+
+/* ── Landing grids ── */
+.r-debates-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; }
+.r-features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; }
+.r-howit-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 32px; }
+.r-format-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: start; }
+.r-leaderboard-header { display: grid; grid-template-columns: 1fr 1.4fr; gap: 1px; }
+.r-leaderboard-table { display: grid; grid-template-columns: 44px 1fr 64px 64px 80px; }
+.r-cta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; }
+
+/* ── Room layouts ── */
+.r-room-layout { display: flex; flex: 1; overflow: hidden; }
+.r-chat-sidebar { width: 320px; flex-shrink: 0; border-left: 1px solid var(--border); }
+.r-chat-fab {
+  display: none; position: fixed; bottom: 20px; right: 20px; z-index: 450;
+  width: 52px; height: 52px; border-radius: 50%; background: var(--g);
+  border: none; cursor: pointer; align-items: center; justify-content: center;
+  box-shadow: 0 4px 20px rgba(0,255,135,0.3);
+}
+.r-chat-drawer {
+  display: none; position: fixed; bottom: 0; left: 0; right: 0;
+  height: 65vh; z-index: 460; background: var(--dark2);
+  border-top: 1px solid var(--g); border-radius: 16px 16px 0 0;
+  transform: translateY(100%); transition: transform 0.3s ease;
+}
+.r-chat-drawer.open { transform: translateY(0); }
+.r-audience-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+.r-lobby-sides { display: grid; grid-template-columns: 1fr auto 1fr; gap: 32px; align-items: center; }
+.r-vote-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.r-results-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.r-room-row { display: grid; grid-template-columns: 160px 1fr 240px 140px; gap: 0; align-items: center; }
+.r-rooms-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; }
+.r-rooms-actions { display: flex; align-items: center; gap: 16px; }
+.r-modal-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+/* ── Modal ── */
+.r-modal { width: calc(100vw - 32px); }
+
+/* ── Profile ── */
+.r-profile-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; }
+.r-profile-header { display: flex; align-items: center; gap: 24px; }
+
+/* ── Rankings ── */
+.r-podium { display: flex; gap: 16px; }
+.r-rankings-table { display: grid; grid-template-columns: 44px 1fr 64px 64px 80px; }
+.r-rankings-layout { display: grid; grid-template-columns: 1fr 300px; gap: 24px; align-items: start; }
+.r-rankings-header { display: grid; grid-template-columns: 1fr auto; align-items: flex-end; }
+.r-rankings-tabs {
+  display: flex; align-items: center; overflow-x: auto; -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.r-rankings-tabs::-webkit-scrollbar { display: none; }
+.r-rankings-search { width: 140px; }
+
+/* ════ TABLET ════ */
+@media (max-width: 1024px) {
+  .r-hero-stats { grid-template-columns: repeat(3, 1fr) !important; }
+  .r-debates-grid { grid-template-columns: repeat(2, 1fr) !important; }
+  .r-features-grid { grid-template-columns: repeat(2, 1fr) !important; }
+  .r-howit-grid { grid-template-columns: repeat(2, 1fr) !important; }
+  .r-room-row { grid-template-columns: 120px 1fr 140px !important; }
+  .r-room-row .r-room-sides { display: none !important; }
+  .r-pad { padding-left: 24px !important; padding-right: 24px !important; }
+}
+
+/* ════ MOBILE ════ */
+@media (max-width: 768px) {
+  body { cursor: auto; }
+
+  .r-nav-hamburger { display: flex !important; align-items: center; }
+  .r-nav-links { display: none !important; }
+  .r-nav-right { display: none !important; }
+
+  .r-pad { padding-left: 16px !important; padding-right: 16px !important; }
+
+  .r-footer {
+    flex-direction: column !important; gap: 20px !important;
+    padding: 24px 16px !important; text-align: center;
+  }
+  .r-footer > div { justify-content: center; }
+
+  .r-hero-stats { grid-template-columns: 1fr 1fr !important; }
+  .r-hero-stats .r-hero-cta { grid-column: 1 / -1 !important; }
+  .hero-meta { flex-wrap: wrap !important; gap: 8px !important; }
+
+  .r-debates-grid { grid-template-columns: 1fr !important; }
+  .r-features-grid { grid-template-columns: 1fr !important; }
+  .r-howit-grid { grid-template-columns: 1fr !important; }
+  .r-format-grid { grid-template-columns: 1fr !important; gap: 32px !important; }
+  .r-leaderboard-header { grid-template-columns: 1fr !important; }
+  .r-leaderboard-table { grid-template-columns: 44px 1fr 80px !important; }
+  .r-leaderboard-table .r-hide-mobile { display: none !important; }
+  .r-cta-grid { grid-template-columns: 1fr !important; }
+
+  .r-chat-sidebar { display: none !important; }
+  .r-chat-fab { display: flex !important; }
+  .r-chat-drawer { display: flex !important; flex-direction: column; }
+  .r-audience-grid { grid-template-columns: repeat(3, 1fr) !important; }
+  .r-lobby-sides { grid-template-columns: 1fr !important; gap: 16px !important; }
+  .r-vote-buttons { grid-template-columns: 1fr !important; }
+  .r-results-cards { grid-template-columns: 1fr !important; }
+  .r-rooms-header {
+    flex-direction: column !important; align-items: flex-start !important; gap: 16px !important;
+  }
+  .r-rooms-actions {
+    flex-wrap: wrap !important; width: 100% !important; gap: 8px !important;
+  }
+  .r-rooms-filters { flex: 1 1 100% !important; }
+  .r-rooms-filters button { flex: 1 !important; }
+  .r-rooms-btn-featured { flex: 1 !important; }
+  .r-room-row {
+    grid-template-columns: 1fr !important;
+    padding: 16px !important; gap: 12px !important;
+  }
+  .r-room-row > * { min-width: 0; }
+  .r-room-row .r-room-sides { display: flex !important; }
+  .r-modal-inputs { grid-template-columns: 1fr !important; }
+
+  .r-modal { max-width: calc(100vw - 32px) !important; }
+
+  .r-profile-stats { grid-template-columns: 1fr 1fr !important; }
+  .r-profile-header { flex-direction: column !important; align-items: flex-start !important; gap: 16px !important; }
+
+  .r-podium { flex-direction: column !important; }
+  .r-rankings-layout { grid-template-columns: 1fr !important; }
+  .r-rankings-table { grid-template-columns: 52px 1fr 90px !important; }
+  .r-rankings-table .r-hide-mobile { display: none !important; }
+  .r-rankings-header { grid-template-columns: 1fr !important; gap: 12px !important; }
+  .r-rankings-search { width: 100% !important; }
+
+  .r-section-pad { padding-top: 60px !important; padding-bottom: 60px !important; }
+}
+
+/* ════ SMALL MOBILE ════ */
+@media (max-width: 480px) {
+  .r-pad { padding-left: 12px !important; padding-right: 12px !important; }
+  .r-hero-stats { grid-template-columns: 1fr 1fr !important; }
+  .r-profile-stats { grid-template-columns: 1fr !important; }
+}

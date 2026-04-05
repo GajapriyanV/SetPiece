@@ -147,7 +147,7 @@ export default function SignInModal({ onClose, onRegister }: SignInModalProps) {
         animation: "fu 0.25s ease both",
       }}
     >
-      <div style={{
+      <div className="r-modal" style={{
         width: "100%", maxWidth: "500px",
         background: "var(--card)",
         border: "1px solid var(--border2)",

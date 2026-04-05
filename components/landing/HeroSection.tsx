@@ -101,12 +101,12 @@ export default function HeroSection() {
 
       {/* Main content */}
       <div
+        className="r-pad"
         style={{
           flex: 1,
           display: "flex",
           flexDirection: "column",
           justifyContent: "center",
-          padding: "0 40px",
           position: "relative",
           zIndex: 2,
           maxWidth: "1400px",
@@ -196,13 +196,9 @@ export default function HeroSection() {
 
       {/* Bottom stats strip — 5 cells */}
       <div
-        className="hero-bottom-anim"
+        className="hero-bottom-anim r-hero-stats"
         style={{
-          display: "grid",
           gridTemplateColumns: "1fr 1.4fr 1fr 1fr 1.2fr",
-          gap: "1px",
-          background: "var(--border)",
-          border: "1px solid var(--border)",
         }}
       >
         {/* Cell 1 — Season */}
@@ -285,7 +281,7 @@ export default function HeroSection() {
         </div>
 
         {/* Cell 5 — CTA */}
-        <div style={{
+        <div className="r-hero-cta" style={{
           background: "var(--dark2)", padding: "20px 24px",
           borderLeft: "1px solid var(--border)",
           display: "flex", flexDirection: "column", justifyContent: "space-between",

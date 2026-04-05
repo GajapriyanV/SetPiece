@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import { useRoom } from "@/hooks/useRoom";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import RoomTopBar from "@/components/room/RoomTopBar";
 import ChatPanel from "@/components/room/ChatPanel";
 import LobbyView from "@/components/room/LobbyView";
@@ -16,7 +17,9 @@ export default function RoomPage() {
   const router = useRouter();
   const roomId = params.id as string;
   const { state, actions, isLoading, error } = useRoom(roomId);
+  const { isMobile } = useIsMobile();
   const [currentUserId, setCurrentUserId] = useState<string>("");
+  const [chatOpen, setChatOpen] = useState(false);
 
   useEffect(() => {
     const supabase = createClient();
@@ -227,12 +230,13 @@ export default function RoomPage() {
         </div>
       )}
 
-      <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
+      <div className="r-room-layout">
         {/* Main content */}
         <div style={{ flex: 1, overflowY: "auto" }}>
           {/* Topic banner */}
           {(state.status === "live" || state.status === "voting") && (
             <div
+              className="r-pad"
               style={{
                 textAlign: "center",
                 padding: "16px 40px",
@@ -313,11 +317,45 @@ export default function RoomPage() {
           )}
         </div>
 
-        {/* Chat panel */}
-        <div style={{ width: "320px", flexShrink: 0, height: "calc(100vh - 52px)" }}>
+        {/* Chat sidebar (desktop) */}
+        <div className="r-chat-sidebar" style={{ height: "calc(100vh - 52px)" }}>
           <ChatPanel messages={state.chat} onSend={actions.sendChat} />
         </div>
       </div>
+
+      {/* Chat FAB (mobile) */}
+      {isMobile && (
+        <button
+          className="r-chat-fab"
+          onClick={() => setChatOpen((p) => !p)}
+          aria-label="Toggle chat"
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+            <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2v10z" stroke="#000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </button>
+      )}
+
+      {/* Chat drawer (mobile) */}
+      {isMobile && (
+        <div className={`r-chat-drawer${chatOpen ? " open" : ""}`}>
+          <div
+            onClick={() => setChatOpen(false)}
+            style={{
+              padding: "12px",
+              textAlign: "center",
+              cursor: "pointer",
+              borderBottom: "1px solid var(--border)",
+              flexShrink: 0,
+            }}
+          >
+            <div style={{ width: "40px", height: "4px", background: "var(--border2)", borderRadius: "2px", margin: "0 auto" }} />
+          </div>
+          <div style={{ flex: 1, overflow: "hidden" }}>
+            <ChatPanel messages={state.chat} onSend={actions.sendChat} />
+          </div>
+        </div>
+      )}
     </main>
   );
 }

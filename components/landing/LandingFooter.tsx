@@ -15,16 +15,7 @@ const SOCIAL_LINKS = [
 
 export default function LandingFooter() {
   return (
-    <footer
-      style={{
-        borderTop: "1px solid var(--border)",
-        padding: "28px 40px",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        background: "var(--dark2)",
-      }}
-    >
+    <footer className="r-footer">
       <div style={{ display: "flex", alignItems: "center" }}>
         <Image src="/logo.png" alt="SetPiece" width={200} height={60} style={{ display: "block", height: "28px", width: "auto" }} />
       </div>

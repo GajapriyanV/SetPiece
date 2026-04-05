@@ -15,6 +15,7 @@ export default function TopNav() {
   const [showSignIn, setShowSignIn] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [profileUsername, setProfileUsername] = useState<string | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   const fetchProfileUsername = async (userId: string) => {
     const { data } = await supabase.from("profiles").select("username").eq("id", userId).single();
@@ -55,6 +56,7 @@ export default function TopNav() {
       />
     )}
     <nav
+      className="r-pad"
       style={{
         position: "fixed",
         top: 0,
@@ -65,7 +67,6 @@ export default function TopNav() {
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
-        padding: "0 40px",
         borderBottom: "1px solid var(--border)",
         background: "rgba(6,6,8,0.85)",
         backdropFilter: "blur(20px)",
@@ -91,15 +92,7 @@ export default function TopNav() {
       </Link>
 
       {/* Center links */}
-      <div
-        style={{
-          display: "flex",
-          gap: "32px",
-          position: "absolute",
-          left: "50%",
-          transform: "translateX(-50%)",
-        }}
-      >
+      <div className="r-nav-links">
         {[
           { label: "Debates",  href: "/#debates",  anchor: "debates"  },
           { label: "Format",   href: "/#format",   anchor: "format"   },
@@ -139,8 +132,21 @@ export default function TopNav() {
         })}
       </div>
 
+      {/* Hamburger (mobile only) */}
+      <button
+        className="r-nav-hamburger"
+        onClick={() => setDrawerOpen((p) => !p)}
+        aria-label="Toggle menu"
+      >
+        <svg width="22" height="16" viewBox="0 0 22 16" fill="none">
+          <rect y="0" width="22" height="2" rx="1" fill={drawerOpen ? "var(--g)" : "var(--text)"} />
+          <rect y="7" width="22" height="2" rx="1" fill={drawerOpen ? "var(--g)" : "var(--text)"} />
+          <rect y="14" width="22" height="2" rx="1" fill={drawerOpen ? "var(--g)" : "var(--text)"} />
+        </svg>
+      </button>
+
       {/* Right side */}
-      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+      <div className="r-nav-right">
         {user ? (
           <>
             <Link
@@ -242,6 +248,43 @@ export default function TopNav() {
         )}
       </div>
     </nav>
+
+    {/* Mobile drawer */}
+    <div className={`r-nav-drawer${drawerOpen ? " open" : ""}`}>
+      {[
+        { label: "Debates", href: "/rooms" },
+        { label: "Format", href: "/#format" },
+        { label: "Rankings", href: "/rankings" },
+      ].map(({ label, href }) => (
+        <Link key={label} href={href} onClick={() => setDrawerOpen(false)}>
+          {label}
+        </Link>
+      ))}
+      <div style={{ height: "1px", background: "var(--border)", margin: "8px 0" }} />
+      {user ? (
+        <>
+          <Link href="/profile" onClick={() => setDrawerOpen(false)}>
+            {profileUsername || "Profile"}
+          </Link>
+          <button onClick={() => { handleSignOut(); setDrawerOpen(false); }}>
+            Sign Out
+          </button>
+        </>
+      ) : (
+        <>
+          <button onClick={() => { setShowSignIn(true); setDrawerOpen(false); }}>
+            Sign In
+          </button>
+          <Link
+            href="/register"
+            className="r-drawer-cta"
+            onClick={() => setDrawerOpen(false)}
+          >
+            Get Started →
+          </Link>
+        </>
+      )}
+    </div>
     </>
   );
 }

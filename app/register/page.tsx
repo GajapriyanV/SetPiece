@@ -267,7 +267,7 @@ function RegisterContent() {
       display: "flex", alignItems: "center", justifyContent: "center",
       padding: "70px 20px 20px",
     }}>
-      <div style={{
+      <div className="r-modal" style={{
         width: "100%", maxWidth: "500px",
         background: "var(--card)", border: "1px solid var(--border2)",
         borderRadius: "4px", overflow: "hidden",

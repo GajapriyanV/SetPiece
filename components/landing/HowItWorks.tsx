@@ -50,6 +50,7 @@ export default function HowItWorks() {
   return (
     <div
       id="how"
+      className="r-pad r-section-pad"
       style={{
         background: "var(--dark2)",
         borderTop: "1px solid var(--border)",
@@ -75,10 +76,8 @@ export default function HowItWorks() {
         </div>
 
         <div
-          className="rv"
+          className="rv r-howit-grid"
           style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(4, 1fr)",
             marginTop: "60px",
             border: "1px solid var(--border)",
           }}

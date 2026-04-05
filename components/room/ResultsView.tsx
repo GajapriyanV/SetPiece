@@ -107,7 +107,7 @@ export default function ResultsView({
       </div>
 
       {/* Elo changes */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", width: "100%", maxWidth: "500px", marginBottom: "40px" }}>
+      <div className="r-results-cards" style={{ width: "100%", maxWidth: "500px", marginBottom: "40px" }}>
         <EloCard
           username={results.debaterA.username}
           newElo={results.debaterA.newElo}

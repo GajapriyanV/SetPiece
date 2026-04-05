@@ -136,7 +136,7 @@ export default function LobbyView({
       </div>
 
       {/* Side pick buttons */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: "28px", width: "100%", maxWidth: "720px", marginBottom: "44px" }}>
+      <div className="r-lobby-sides" style={{ width: "100%", maxWidth: "720px", marginBottom: "44px" }}>
         <SideButton
           label={sideALabel}
           sideLabel="Side A"

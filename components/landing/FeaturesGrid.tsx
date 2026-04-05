@@ -60,7 +60,7 @@ export default function FeaturesGrid() {
   }, []);
 
   return (
-    <section style={{ padding: "100px 40px" }}>
+    <section className="r-pad r-section-pad" style={{ padding: "100px 40px" }}>
       <div ref={ref} style={{ maxWidth: "1400px", margin: "0 auto" }}>
         <div className="rv">
           <div className="sec-label">Platform</div>
@@ -79,11 +79,8 @@ export default function FeaturesGrid() {
         </div>
 
         <div
-          className="rv"
+          className="rv r-features-grid"
           style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(3, 1fr)",
-            gap: "1px",
             background: "var(--border)",
             border: "1px solid var(--border)",
             marginTop: "60px",

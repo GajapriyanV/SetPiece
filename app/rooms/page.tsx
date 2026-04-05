@@ -29,14 +29,13 @@ function RoomRow({ room }: { room: RoomListItem }) {
       href={`/rooms/${room.roomId}`}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      className="r-room-row"
       style={{
         textDecoration: "none",
         color: "inherit",
         background: hovered ? "#13131a" : "var(--card)",
         borderLeft: `2px solid ${isLive ? "var(--red)" : isOpen ? "var(--g)" : "var(--border)"}`,
         padding: "24px 32px",
-        display: "grid",
-        gridTemplateColumns: "160px 1fr 240px 140px",
         alignItems: "center",
         gap: "24px",
         transition: "background 0.25s",
@@ -112,7 +111,7 @@ function RoomRow({ room }: { room: RoomListItem }) {
       </div>
 
       {/* Sides */}
-      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+      <div className="r-room-sides" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
         <div
           style={{
             flex: 1,
@@ -253,11 +252,11 @@ export default function RoomsPage() {
 
   return (
     <main style={{ background: "var(--dark)", minHeight: "100vh", paddingTop: "80px" }}>
-      <div ref={ref} style={{ maxWidth: "1100px", margin: "0 auto", padding: "60px 40px" }}>
+      <div ref={ref} className="r-pad" style={{ maxWidth: "1100px", margin: "0 auto", paddingTop: "60px", paddingBottom: "60px" }}>
         {/* Header */}
         <div className="rv" style={{ marginBottom: "48px" }}>
           <div className="sec-label">All Rooms</div>
-          <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: "24px" }}>
+          <div className="r-rooms-header" style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: "24px" }}>
             <h1
               style={{
                 fontFamily: "var(--font-oswald, 'Oswald', sans-serif)",
@@ -272,9 +271,9 @@ export default function RoomsPage() {
               Live Debates
             </h1>
 
-            <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+            <div className="r-rooms-actions" style={{ display: "flex", alignItems: "center", gap: "16px" }}>
               {/* Filter tabs */}
-              <div style={{ display: "flex", gap: "1px", background: "var(--border)", border: "1px solid var(--border)" }}>
+              <div className="r-rooms-filters" style={{ display: "flex", gap: "1px", background: "var(--border)", border: "1px solid var(--border)" }}>
                 {(["all", "live", "open"] as const).map((f) => (
                   <FilterTab
                     key={f}
@@ -290,6 +289,7 @@ export default function RoomsPage() {
                 onClick={() => setShowFeaturedCreate(true)}
                 onMouseEnter={() => setFeaturedHovered(true)}
                 onMouseLeave={() => setFeaturedHovered(false)}
+                className="r-rooms-btn-featured"
                 style={{
                   background: "transparent",
                   border: `1px solid ${featuredHovered ? "var(--g)" : "var(--border)"}`,

@@ -327,8 +327,8 @@ export default function LiveDebatesGrid() {
     <>
       {showSignIn && <SignInModal onClose={() => setShowSignIn(false)} />}
 
-      <div id="debates" style={{ background: "var(--dark)", padding: "100px 0", scrollMarginTop: "60px" }}>
-        <div ref={ref} style={{ padding: "0 40px", maxWidth: "1400px", margin: "0 auto" }}>
+      <div id="debates" className="r-section-pad" style={{ background: "var(--dark)", padding: "100px 0", scrollMarginTop: "60px" }}>
+        <div ref={ref} className="r-pad" style={{ maxWidth: "1400px", margin: "0 auto" }}>
 
           {/* Section header */}
           <div className="rv" style={{ marginBottom: "40px" }}>
@@ -341,10 +341,7 @@ export default function LiveDebatesGrid() {
           </div>
 
           {/* Grid */}
-          <div className="rv" style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(3, 1fr)",
-            gap: "1px",
+          <div className="rv r-debates-grid" style={{
             background: "var(--border)",
             border: "1px solid var(--border)",
           }}>

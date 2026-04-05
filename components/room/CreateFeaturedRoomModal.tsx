@@ -148,6 +148,7 @@ export default function CreateFeaturedRoomModal({ onClose }: { onClose: () => vo
       }}
     >
       <div
+        className="r-modal"
         style={{
           width: "100%",
           maxWidth: "640px",
@@ -248,7 +249,7 @@ export default function CreateFeaturedRoomModal({ onClose }: { onClose: () => vo
               </div>
 
               {/* Sides */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+              <div className="r-modal-inputs" style={{ gap: "12px" }}>
                 <div>
                   <label style={{ ...labelStyle, color: "#60a5fa" }}>Side A</label>
                   <input

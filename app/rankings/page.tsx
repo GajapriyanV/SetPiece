@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CURRENT_SEASON } from "@/lib/season";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 // ── Feature flag ───────────────────────────────────────────────────────────────
 // Set to true to expose the Ranked (Elo-based) leaderboard tab
@@ -369,9 +370,9 @@ function PlayerRow({
 
   return (
     <div
+      className="r-rankings-table"
       onClick={() => router.push(`/profile/${player.username}`)}
       style={{
-        display: "grid",
         gridTemplateColumns: colTemplate,
         alignItems: "center",
         padding: "13px 16px",
@@ -469,6 +470,7 @@ function PlayerRow({
 
       {/* Country */}
       <div
+        className="r-hide-mobile"
         style={{
           fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
           fontSize: "10px",
@@ -483,7 +485,7 @@ function PlayerRow({
       </div>
 
       {/* Win rate */}
-      <div style={{ textAlign: "right" }}>
+      <div className="r-hide-mobile" style={{ textAlign: "right" }}>
         <div
           style={{
             height: "2px",
@@ -519,6 +521,7 @@ function PlayerRow({
 
       {/* W */}
       <div
+        className="r-hide-mobile"
         style={{
           fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
           fontSize: "12px",
@@ -531,6 +534,7 @@ function PlayerRow({
 
       {/* L */}
       <div
+        className="r-hide-mobile"
         style={{
           fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
           fontSize: "12px",
@@ -561,8 +565,8 @@ function PlayerRow({
 function SkeletonRow() {
   return (
     <div
+      className="r-rankings-table"
       style={{
-        display: "grid",
         gridTemplateColumns: "52px 1fr 110px 90px 70px 70px 90px",
         alignItems: "center",
         padding: "13px 16px",
@@ -575,6 +579,7 @@ function SkeletonRow() {
       {[44, 160, 80, 60, 28, 28, 48].map((w, i) => (
         <div
           key={i}
+          className={i >= 2 && i <= 5 ? "r-hide-mobile" : undefined}
           style={{
             height: "10px",
             borderRadius: "2px",
@@ -589,10 +594,157 @@ function SkeletonRow() {
   );
 }
 
+const PODIUM_ROW_ACCENTS = [
+  { border: "#eab308", bg: "rgba(234,179,8,0.04)", badge: "Champion", badgeBg: "rgba(234,179,8,0.1)", badgeColor: "#eab308", badgeBorder: "rgba(234,179,8,0.25)", numColor: "#eab308" },
+  { border: "#94a3b8", bg: "transparent", badge: "Runner Up", badgeBg: "rgba(148,163,184,0.07)", badgeColor: "#94a3b8", badgeBorder: "rgba(148,163,184,0.15)", numColor: "#94a3b8" },
+  { border: "#b45309", bg: "transparent", badge: "3rd Place", badgeBg: "rgba(180,83,9,0.08)", badgeColor: "#b45309", badgeBorder: "rgba(180,83,9,0.2)", numColor: "#b45309" },
+];
+
+function MobilePodiumRow({ player, rank, mode }: { player: Player; rank: number; mode: Mode }) {
+  const router = useRouter();
+  const color = avatarColor(player.id);
+  const accent = PODIUM_ROW_ACCENTS[rank - 1];
+  const statValue = mode === "ranked" ? player.elo.toLocaleString() : String(player.wins);
+  const statLabel = mode === "ranked" ? "ELO" : "WINS";
+
+  return (
+    <div
+      onClick={() => router.push(`/profile/${player.username}`)}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "14px",
+        padding: "16px 16px 16px 18px",
+        background: accent.bg,
+        borderLeft: `3px solid ${accent.border}`,
+        border: `1px solid ${rank === 1 ? "rgba(234,179,8,0.2)" : "var(--border)"}`,
+        borderLeftWidth: "3px",
+        borderLeftColor: accent.border,
+        cursor: "pointer",
+        transition: "background 0.2s",
+      }}
+    >
+      {/* Rank */}
+      <div
+        style={{
+          fontFamily: "var(--font-oswald, 'Oswald', sans-serif)",
+          fontSize: "28px",
+          fontWeight: 700,
+          color: accent.numColor,
+          width: "32px",
+          textAlign: "center",
+          flexShrink: 0,
+        }}
+      >
+        {rank}
+      </div>
+
+      {/* Avatar */}
+      <div
+        style={{
+          width: "40px",
+          height: "40px",
+          borderRadius: "50%",
+          background: color,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: "15px",
+          fontWeight: 700,
+          color: "#fff",
+          flexShrink: 0,
+          boxShadow: rank === 1 ? "0 0 0 2px rgba(234,179,8,0.4)" : "none",
+          overflow: "hidden",
+        }}
+      >
+        {player.avatarUrl ? (
+          <img src={player.avatarUrl} alt={player.username} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        ) : (
+          player.username[0]?.toUpperCase() ?? "?"
+        )}
+      </div>
+
+      {/* Name + badge + record */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "3px" }}>
+          <div
+            style={{
+              fontFamily: "var(--font-oswald, 'Oswald', sans-serif)",
+              fontSize: "16px",
+              fontWeight: 600,
+              textTransform: "uppercase",
+              letterSpacing: "0.5px",
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
+            {player.username}
+          </div>
+          <span
+            style={{
+              fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+              fontSize: "7px",
+              letterSpacing: "1.5px",
+              textTransform: "uppercase",
+              padding: "2px 6px",
+              background: accent.badgeBg,
+              color: accent.badgeColor,
+              border: `1px solid ${accent.badgeBorder}`,
+              whiteSpace: "nowrap",
+              flexShrink: 0,
+            }}
+          >
+            {accent.badge}
+          </span>
+        </div>
+        <div
+          style={{
+            fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+            fontSize: "9px",
+            color: "var(--dim)",
+            letterSpacing: "1px",
+          }}
+        >
+          {player.wins}W · {player.losses}L · {player.winPct}%
+        </div>
+      </div>
+
+      {/* Key stat */}
+      <div style={{ textAlign: "right", flexShrink: 0 }}>
+        <div
+          style={{
+            fontFamily: "var(--font-oswald, 'Oswald', sans-serif)",
+            fontSize: "26px",
+            fontWeight: 700,
+            lineHeight: 1,
+            color: accent.numColor,
+            letterSpacing: "-1px",
+          }}
+        >
+          {statValue}
+        </div>
+        <div
+          style={{
+            fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
+            fontSize: "8px",
+            color: "var(--dim)",
+            letterSpacing: "2px",
+            marginTop: "2px",
+          }}
+        >
+          {statLabel}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Main Page ──────────────────────────────────────────────────────────────────
 
 export default function RankingsPage() {
   const ref = useRef<HTMLDivElement>(null);
+  const { isMobile } = useIsMobile();
 
   const [mode, setMode] = useState<Mode>("unranked");
   const [section, setSection] = useState<Section>("global");
@@ -694,8 +846,9 @@ export default function RankingsPage() {
 
         {/* ── Page Header ── */}
         <div
+          className="r-pad"
           style={{
-            padding: "64px 40px 0",
+            paddingTop: "64px",
             borderBottom: "1px solid var(--border)",
             position: "relative",
             overflow: "hidden",
@@ -724,12 +877,10 @@ export default function RankingsPage() {
           </div>
 
           <div
+            className="r-rankings-header"
             style={{
               maxWidth: "1400px",
               margin: "0 auto",
-              display: "grid",
-              gridTemplateColumns: "1fr auto",
-              alignItems: "flex-end",
               paddingBottom: "40px",
               position: "relative",
               zIndex: 1,
@@ -787,11 +938,10 @@ export default function RankingsPage() {
 
           {/* Tab bar */}
           <div
+            className="r-rankings-tabs"
             style={{
               maxWidth: "1400px",
               margin: "0 auto",
-              display: "flex",
-              alignItems: "center",
               borderTop: "1px solid var(--border)",
               position: "relative",
               zIndex: 1,
@@ -887,14 +1037,12 @@ export default function RankingsPage() {
 
         {/* ── Main content ── */}
         <div
+          className="r-pad r-rankings-layout"
           style={{
             maxWidth: "1400px",
             margin: "0 auto",
-            padding: "40px 40px 80px",
-            display: "grid",
-            gridTemplateColumns: "1fr 300px",
-            gap: "24px",
-            alignItems: "start",
+            paddingTop: "40px",
+            paddingBottom: "80px",
           }}
         >
           {/* ── Left column ── */}
@@ -938,24 +1086,30 @@ export default function RankingsPage() {
 
             {/* Podium */}
             {podiumDisplayOrder.length === 3 && !loading && (
-              <div
-                className="rv"
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr 1fr",
-                  gap: "12px",
-                  marginBottom: "32px",
-                }}
-              >
-                {podiumDisplayOrder.map((player, i) => (
-                  <PodiumCard
-                    key={player.id}
-                    player={player}
-                    styleIndex={i}
-                    mode={mode}
-                  />
-                ))}
-              </div>
+              isMobile ? (
+                <div className="rv" style={{ display: "flex", flexDirection: "column", gap: "1px", background: "var(--border)", border: "1px solid var(--border)", marginBottom: "32px" }}>
+                  {[players[0], players[1], players[2]].map((player, i) => (
+                    <MobilePodiumRow key={player.id} player={player} rank={i + 1} mode={mode} />
+                  ))}
+                </div>
+              ) : (
+                <div
+                  className="rv r-podium"
+                  style={{
+                    gap: "12px",
+                    marginBottom: "32px",
+                  }}
+                >
+                  {podiumDisplayOrder.map((player, i) => (
+                    <PodiumCard
+                      key={player.id}
+                      player={player}
+                      styleIndex={i}
+                      mode={mode}
+                    />
+                  ))}
+                </div>
+              )
             )}
 
             {/* Table header */}
@@ -1006,6 +1160,7 @@ export default function RankingsPage() {
                   placeholder="Search debater..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
+                  className="r-rankings-search"
                   style={{
                     background: "none",
                     border: "none",
@@ -1014,7 +1169,6 @@ export default function RankingsPage() {
                     fontSize: "10px",
                     color: "var(--text)",
                     letterSpacing: "1px",
-                    width: "140px",
                   }}
                 />
               </div>
@@ -1022,9 +1176,8 @@ export default function RankingsPage() {
 
             {/* Column headers */}
             <div
-              className="rv"
+              className="rv r-rankings-table"
               style={{
-                display: "grid",
                 gridTemplateColumns: "52px 1fr 110px 90px 70px 70px 90px",
                 padding: "10px 16px",
                 fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
@@ -1040,6 +1193,7 @@ export default function RankingsPage() {
               {colHeaders.map((h, i) => (
                 <div
                   key={h}
+                  className={i >= 2 && i <= 5 ? "r-hide-mobile" : undefined}
                   style={{
                     textAlign: i >= 3 ? "right" : "left",
                     color: h.includes("↓") ? "var(--g)" : "var(--dim)",

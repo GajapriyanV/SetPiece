@@ -462,7 +462,7 @@ export default function LiveView({
           </span>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: "20px 12px" }}>
+        <div className="r-audience-grid" style={{ gap: "20px 12px" }}>
           {spectators.slice(0, 11).map((s) => (
             <div key={s.userId} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
               <div

@@ -328,10 +328,10 @@ function ProfileContent() {
             PROFILE
           </div>
 
-          <div style={{
+          <div className="r-pad" style={{
             maxWidth: "1400px",
             margin: "0 auto",
-            padding: "56px 40px 0",
+            paddingTop: "56px",
             position: "relative",
             zIndex: 1,
           }}>
@@ -349,10 +349,7 @@ function ProfileContent() {
             ) : profile ? (
               <>
                 {/* Top row: avatar + info + edit button */}
-                <div className="rv" style={{
-                  display: "flex",
-                  alignItems: "flex-start",
-                  gap: "28px",
+                <div className="rv r-profile-header" style={{
                   paddingBottom: "40px",
                 }}>
                   {/* Avatar */}
@@ -478,8 +475,7 @@ function ProfileContent() {
                 </div>
 
                 {/* ── Stats strip ── */}
-                <div className="rv" style={{
-                  display: "grid",
+                <div className="rv r-profile-stats" style={{
                   gridTemplateColumns: "1fr 1fr 1fr 1fr",
                   gap: "1px",
                   background: "var(--border)",
@@ -617,7 +613,7 @@ function ProfileContent() {
 
         {/* ── Debate History ── */}
         {profile && (
-          <div style={{ maxWidth: "1400px", margin: "0 auto", padding: "40px 40px 80px" }}>
+          <div className="r-pad" style={{ maxWidth: "1400px", margin: "0 auto", paddingTop: "40px", paddingBottom: "80px" }}>
 
             {/* Section header */}
             <div className="rv" style={{

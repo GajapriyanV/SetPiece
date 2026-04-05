@@ -71,7 +71,7 @@ export default function VotingView({
           Waiting for votes
         </div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", width: "100%", maxWidth: "500px", marginBottom: "36px" }}>
+        <div className="r-vote-buttons" style={{ width: "100%", maxWidth: "500px", marginBottom: "36px" }}>
           <VoteButton
             label={sideALabel}
             sideLabel="Side A"

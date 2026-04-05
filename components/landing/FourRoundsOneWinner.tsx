@@ -290,7 +290,7 @@ export default function FourRoundsOneWinner() {
   }, []);
 
   return (
-    <section id="format" style={{
+    <section id="format" className="r-pad r-section-pad" style={{
       background: "var(--dark2)",
       borderBottom: "1px solid var(--border)",
       scrollMarginTop: "60px",
@@ -315,11 +315,7 @@ export default function FourRoundsOneWinner() {
         </div>
 
         {/* Two-column layout */}
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: "80px",
-          alignItems: "center",
+        <div className="r-format-grid" style={{
           marginTop: "64px",
         }}>
 

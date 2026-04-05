@@ -69,6 +69,7 @@ export default function LeaderboardPreview() {
   return (
     <section
       id="leaderboard"
+      className="r-pad r-section-pad"
       style={{
         background: "var(--dark2)",
         borderTop: "1px solid var(--border)",
@@ -81,9 +82,8 @@ export default function LeaderboardPreview() {
         </div>
 
         <div
+          className="r-leaderboard-header"
           style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1.4fr",
             gap: "80px",
             alignItems: "start",
             marginTop: "60px",
@@ -157,9 +157,8 @@ export default function LeaderboardPreview() {
             <div style={{ border: "1px solid var(--border)" }}>
               {/* Header */}
               <div
+                className="r-leaderboard-table"
                 style={{
-                  display: "grid",
-                  gridTemplateColumns: "44px 1fr 64px 64px 80px",
                   padding: "12px 20px",
                   borderBottom: "1px solid var(--border)",
                   fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",
@@ -171,8 +170,8 @@ export default function LeaderboardPreview() {
               >
                 <span>#</span>
                 <span>Debater</span>
-                <span style={{ textAlign: "right" }}>W</span>
-                <span style={{ textAlign: "right" }}>L</span>
+                <span className="r-hide-mobile" style={{ textAlign: "right" }}>W</span>
+                <span className="r-hide-mobile" style={{ textAlign: "right" }}>L</span>
                 <span style={{ textAlign: "right" }}>Wins ↓</span>
               </div>
 
@@ -181,9 +180,8 @@ export default function LeaderboardPreview() {
                 ? Array.from({ length: 5 }).map((_, i) => (
                     <div
                       key={i}
+                      className="r-leaderboard-table"
                       style={{
-                        display: "grid",
-                        gridTemplateColumns: "44px 1fr 64px 64px 80px",
                         alignItems: "center",
                         padding: "14px 20px",
                         borderBottom: i < 4 ? "1px solid var(--border)" : "none",
@@ -208,10 +206,9 @@ export default function LeaderboardPreview() {
                 : players.map((p, i) => (
                     <div
                       key={p.id}
+                      className="r-leaderboard-table"
                       onClick={() => router.push(`/profile/${p.username}`)}
                       style={{
-                        display: "grid",
-                        gridTemplateColumns: "44px 1fr 64px 64px 80px",
                         alignItems: "center",
                         padding: "14px 20px",
                         borderBottom:
@@ -287,6 +284,7 @@ export default function LeaderboardPreview() {
                         </div>
                       </div>
                       <div
+                        className="r-hide-mobile"
                         style={{
                           textAlign: "right",
                           fontFamily:
@@ -298,6 +296,7 @@ export default function LeaderboardPreview() {
                         {p.wins}
                       </div>
                       <div
+                        className="r-hide-mobile"
                         style={{
                           textAlign: "right",
                           fontFamily:

@@ -40,17 +40,13 @@ export async function GET(
     if (likes) likes.forEach((l) => likedIds.add(l.target_id));
   }
 
-  // Build nested reply structure
-  const topLevel = (allReplies ?? []).filter((r) => !r.parent_reply_id);
-  const nested = (allReplies ?? []).filter((r) => r.parent_reply_id);
+  // Build recursive reply tree
+  const buildTree = (all: typeof allReplies, parentId: string | null): object[] =>
+    (all ?? [])
+      .filter((r) => r.parent_reply_id === parentId)
+      .map((r) => ({ ...r, user_liked: likedIds.has(r.id), children: buildTree(all, r.id) }));
 
-  const replies = topLevel.map((reply) => ({
-    ...reply,
-    user_liked: likedIds.has(reply.id),
-    nested: nested
-      .filter((n) => n.parent_reply_id === reply.id)
-      .map((n) => ({ ...n, user_liked: likedIds.has(n.id) })),
-  }));
+  const replies = buildTree(allReplies, null);
 
   return NextResponse.json({
     thread: { ...thread, user_liked: likedIds.has(id), author_id: undefined },

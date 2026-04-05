@@ -6,11 +6,12 @@ import { createClient } from "@/utils/supabase/client";
 
 interface NotificationItem {
   id: string;
-  type: "thread_reply" | "reply_reply";
+  type: "thread_reply" | "reply_reply" | "thread_like" | "reply_like" | "mvp_awarded";
   thread_id: string;
-  reply_id: string;
+  reply_id: string | null;
   is_read: boolean;
   created_at: string;
+  count: number;
   actor: { username: string; avatar_url: string | null } | null;
   thread: { title: string } | null;
 }
@@ -58,16 +59,13 @@ export default function NotificationBell() {
         .channel("notifications-live")
         .on(
           "postgres_changes",
-          {
-            event: "INSERT",
-            schema: "public",
-            table: "notifications",
-            filter: `user_id=eq.${user.id}`,
-          },
-          () => {
-            // Re-fetch to get full joined data (actor username, thread title)
-            fetchNotifications();
-          }
+          { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` },
+          () => { fetchNotifications(); }
+        )
+        .on(
+          "postgres_changes",
+          { event: "UPDATE", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` },
+          () => { fetchNotifications(); }
         )
         .subscribe();
     };
@@ -97,14 +95,17 @@ export default function NotificationBell() {
   };
 
   const handleNotificationClick = async (notif: NotificationItem) => {
-    // Mark as read
     if (!notif.is_read) {
       await fetch(`/api/notifications/${notif.id}`, { method: "PATCH" });
       setNotifications((prev) => prev.map((n) => n.id === notif.id ? { ...n, is_read: true } : n));
       setUnreadCount((c) => Math.max(0, c - 1));
     }
     setOpen(false);
-    router.push(`/forum/${notif.thread_id}#reply-${notif.reply_id}`);
+    if (notif.type === "thread_like") {
+      router.push(`/forum/${notif.thread_id}`);
+    } else {
+      router.push(`/forum/${notif.thread_id}#reply-${notif.reply_id}`);
+    }
   };
 
   if (!loaded) return null;
@@ -262,11 +263,24 @@ export default function NotificationBell() {
                       lineHeight: 1.5,
                       marginBottom: "4px",
                     }}>
-                      <span style={{ color: notif.is_read ? "var(--dim)" : "var(--text)", fontWeight: 600 }}>
-                        @{notif.actor?.username ?? "someone"}
-                      </span>
-                      {" "}
-                      {notif.type === "thread_reply" ? "replied to your thread" : "replied to your comment"}
+                      {notif.type === "mvp_awarded" ? (
+                        <>
+                          <span style={{ color: "#ffc800", fontWeight: 600 }}>MVP</span>
+                          {" — your reply was the most voted"}
+                        </>
+                      ) : (
+                        <>
+                          <span style={{ fontWeight: 600 }}>
+                            @{notif.actor?.username ?? "someone"}
+                            {notif.count > 1 && ` and ${notif.count - 1} other${notif.count - 1 > 1 ? "s" : ""}`}
+                          </span>
+                          {" "}
+                          {notif.type === "thread_reply" && "replied to your thread"}
+                          {notif.type === "reply_reply" && "replied to your comment"}
+                          {notif.type === "thread_like" && "liked your thread"}
+                          {notif.type === "reply_like" && "liked your comment"}
+                        </>
+                      )}
                     </div>
                     <div style={{
                       fontFamily: "var(--font-mono, 'Roboto Mono', monospace)",

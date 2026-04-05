@@ -33,7 +33,6 @@ export async function POST(
       .eq("id", parent_reply_id)
       .single();
     if (!parent) return NextResponse.json({ error: "Parent reply not found" }, { status: 404 });
-    if (parent.parent_reply_id) return NextResponse.json({ error: "Cannot nest replies more than one level" }, { status: 400 });
   }
 
   const { data: reply, error } = await supabase

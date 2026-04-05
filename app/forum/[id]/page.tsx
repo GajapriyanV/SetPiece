@@ -14,17 +14,6 @@ interface Author {
   avatar_url: string | null;
 }
 
-interface NestedReply {
-  id: string;
-  parent_reply_id: string;
-  body: string;
-  upvotes_count: number;
-  is_mvp: boolean;
-  created_at: string;
-  author: Author;
-  user_liked: boolean;
-}
-
 interface Reply {
   id: string;
   parent_reply_id: string | null;
@@ -34,7 +23,7 @@ interface Reply {
   created_at: string;
   author: Author;
   user_liked: boolean;
-  nested: NestedReply[];
+  children: Reply[];
 }
 
 interface Thread {
@@ -76,6 +65,37 @@ function Avatar({ author, size = 28 }: { author: Author | null; size?: number })
       {(author.name || author.username)[0].toUpperCase()}
     </div>
   );
+}
+
+// ── Tree helpers ────────────────────────────────────────────────────────────────
+
+function findReply(replies: Reply[], id: string): Reply | null {
+  for (const r of replies) {
+    if (r.id === id) return r;
+    const found = findReply(r.children, id);
+    if (found) return found;
+  }
+  return null;
+}
+
+function updateReplyInTree(replies: Reply[], id: string, updater: (r: Reply) => Reply): Reply[] {
+  return replies.map((r) => {
+    if (r.id === id) return updater(r);
+    return { ...r, children: updateReplyInTree(r.children, id, updater) };
+  });
+}
+
+function removeReplyFromTree(replies: Reply[], id: string): Reply[] {
+  return replies
+    .filter((r) => r.id !== id)
+    .map((r) => ({ ...r, children: removeReplyFromTree(r.children, id) }));
+}
+
+function addChildToReply(replies: Reply[], parentId: string, child: Reply): Reply[] {
+  return replies.map((r) => {
+    if (r.id === parentId) return { ...r, children: [...r.children, child] };
+    return { ...r, children: addChildToReply(r.children, parentId, child) };
+  });
 }
 
 // ── Report Modal ────────────────────────────────────────────────────────────────
@@ -174,7 +194,7 @@ function ReplyCard({
   reply, currentUserId, isAdmin, isClosed,
   onLike, onDelete, onReport, onReply, depth = 0,
 }: {
-  reply: Reply | NestedReply;
+  reply: Reply;
   currentUserId: string | null;
   isAdmin: boolean;
   isClosed: boolean;
@@ -184,10 +204,12 @@ function ReplyCard({
   onReply?: (replyId: string) => void;
   depth?: number;
 }) {
+  const [expanded, setExpanded] = useState(false);
   const isOwn = currentUserId === reply.author?.id;
+  const hasChildren = reply.children.length > 0;
 
   return (
-    <div style={{ borderLeft: depth > 0 ? "2px solid var(--border)" : "none", paddingLeft: depth > 0 ? "20px" : "0", marginTop: depth > 0 ? "0" : "0" }}>
+    <div id={`reply-${reply.id}`} style={{ borderLeft: depth > 0 ? "2px solid var(--border)" : "none", paddingLeft: depth > 0 ? "20px" : "0" }}>
       <div
         style={{
           background: reply.is_mvp ? "rgba(255,200,0,0.04)" : "var(--card)",
@@ -225,7 +247,7 @@ function ReplyCard({
         {/* Actions */}
         <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
           <LikeButton count={reply.upvotes_count} liked={reply.user_liked} onLike={() => onLike(reply.id)} disabled={!currentUserId} />
-          {!isClosed && depth === 0 && onReply && currentUserId && (
+          {!isClosed && onReply && currentUserId && (
             <button
               onClick={() => onReply(reply.id)}
               style={{ padding: "4px 10px", border: "1px solid var(--border)", background: "transparent", color: "var(--dim)", fontFamily: "var(--font-mono, 'Roboto Mono', monospace)", fontSize: "9px", letterSpacing: "1.5px", textTransform: "uppercase", cursor: "pointer", transition: "all 0.15s" }}
@@ -233,6 +255,16 @@ function ReplyCard({
               onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--dim)"; }}
             >
               Reply
+            </button>
+          )}
+          {hasChildren && (
+            <button
+              onClick={() => setExpanded((e) => !e)}
+              style={{ padding: "4px 10px", border: "1px solid transparent", background: "transparent", color: "var(--dim)", fontFamily: "var(--font-mono, 'Roboto Mono', monospace)", fontSize: "9px", letterSpacing: "1.5px", textTransform: "uppercase", cursor: "pointer", transition: "color 0.15s" }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = "var(--text)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = "var(--dim)"; }}
+            >
+              {expanded ? "Hide replies" : `${reply.children.length} ${reply.children.length === 1 ? "reply" : "replies"} ↓`}
             </button>
           )}
           {currentUserId && (
@@ -257,6 +289,27 @@ function ReplyCard({
           )}
         </div>
       </div>
+
+      {/* Children — collapsed by default */}
+      {expanded && hasChildren && (
+        <div style={{ marginTop: "1px" }}>
+          {reply.children.map((child) => (
+            <div key={child.id} style={{ marginBottom: "1px" }}>
+              <ReplyCard
+                reply={child}
+                currentUserId={currentUserId}
+                isAdmin={isAdmin}
+                isClosed={isClosed}
+                onLike={onLike}
+                onDelete={onDelete}
+                onReport={onReport}
+                onReply={onReply}
+                depth={1}
+              />
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -319,18 +372,12 @@ export default function ThreadPage() {
     const res = await fetch(`/api/forum/reply/${replyId}/like`, { method: "POST" });
     const data = await res.json();
     const delta = data.liked ? 1 : -1;
-    setReplies((prev) => prev.map((r) => {
-      if (r.id === replyId) return { ...r, user_liked: data.liked, upvotes_count: r.upvotes_count + delta };
-      return { ...r, nested: r.nested.map((n) => n.id === replyId ? { ...n, user_liked: data.liked, upvotes_count: n.upvotes_count + delta } : n) };
-    }));
+    setReplies((prev) => updateReplyInTree(prev, replyId, (r) => ({ ...r, user_liked: data.liked, upvotes_count: r.upvotes_count + delta })));
   };
 
   const handleReplyDelete = async (replyId: string) => {
     await fetch(`/api/forum/reply/${replyId}`, { method: "DELETE" });
-    setReplies((prev) => {
-      const filtered = prev.filter((r) => r.id !== replyId);
-      return filtered.map((r) => ({ ...r, nested: r.nested.filter((n) => n.id !== replyId) }));
-    });
+    setReplies((prev) => removeReplyFromTree(prev, replyId));
   };
 
   const handleThreadDelete = async () => {
@@ -357,11 +404,11 @@ export default function ThreadPage() {
     setSubmitting(false);
     if (!res.ok) { setReplyError(data.error ?? "Failed to post reply."); return; }
 
-    const newReply = data.reply;
+    const newReply: Reply = { ...data.reply, children: [] };
     if (replyingTo) {
-      setReplies((prev) => prev.map((r) => r.id === replyingTo ? { ...r, nested: [...r.nested, newReply] } : r));
+      setReplies((prev) => addChildToReply(prev, replyingTo, newReply));
     } else {
-      setReplies((prev) => [...prev, { ...newReply, nested: [] }]);
+      setReplies((prev) => [...prev, newReply]);
     }
     setReplyBody("");
     setReplyingTo(null);
@@ -386,7 +433,7 @@ export default function ThreadPage() {
   }
 
   const isOwn = currentUserId === thread.author?.id;
-  const replyingToReply = replyingTo ? replies.find((r) => r.id === replyingTo) : null;
+  const replyingToReply = replyingTo ? findReply(replies, replyingTo) : null;
 
   return (
     <div style={{ paddingTop: "60px", minHeight: "100vh", background: "var(--dark)" }}>
@@ -487,7 +534,7 @@ export default function ThreadPage() {
         {replies.length > 0 && (
           <div style={{ marginBottom: "32px" }}>
             {replies.map((reply) => (
-              <div key={reply.id} id={`reply-${reply.id}`} style={{ marginBottom: "2px" }}>
+              <div key={reply.id} style={{ marginBottom: "2px" }}>
                 <ReplyCard
                   reply={reply}
                   currentUserId={currentUserId}
@@ -498,25 +545,6 @@ export default function ThreadPage() {
                   onReport={(replyId) => setReportTarget({ type: "reply", id: replyId })}
                   onReply={handleReplyTo}
                 />
-                {/* Nested replies */}
-                {reply.nested.length > 0 && (
-                  <div style={{ paddingLeft: "24px", marginTop: "1px" }}>
-                    {reply.nested.map((nested) => (
-                      <div key={nested.id} id={`reply-${nested.id}`} style={{ marginBottom: "1px" }}>
-                        <ReplyCard
-                          reply={nested as unknown as Reply}
-                          currentUserId={currentUserId}
-                          isAdmin={isAdmin}
-                          isClosed={thread.is_closed}
-                          onLike={handleReplyLike}
-                          onDelete={handleReplyDelete}
-                          onReport={(replyId) => setReportTarget({ type: "reply", id: replyId })}
-                          depth={1}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
             ))}
           </div>

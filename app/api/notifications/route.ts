@@ -9,7 +9,7 @@ export async function GET() {
   const { data: notifications } = await supabase
     .from("notifications")
     .select(`
-      id, type, thread_id, reply_id, is_read, created_at,
+      id, type, thread_id, reply_id, is_read, created_at, count,
       actor:profiles!actor_id(username, avatar_url),
       thread:forum_threads!thread_id(title)
     `)

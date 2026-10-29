@@ -5,7 +5,7 @@ import Link from "next/link";
 import CreateRoomModal from "@/components/room/CreateRoomModal";
 import CreateFeaturedRoomModal from "@/components/room/CreateFeaturedRoomModal";
 
-const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3001";
+import { listRooms } from "@/lib/realtime/config";
 
 interface RoomListItem {
   roomId: string;
@@ -213,11 +213,7 @@ export default function RoomsPage() {
   useEffect(() => {
     async function fetchRooms() {
       try {
-        const res = await fetch(`${SOCKET_URL}/api/rooms`);
-        if (res.ok) {
-          const data = await res.json();
-          setRooms(data);
-        }
+        setRooms(await listRooms());
       } catch {
         // Server might not be running
       } finally {

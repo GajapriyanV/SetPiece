@@ -1,8 +1,12 @@
+import { accountProxy } from "@/lib/server/account-proxy";
+import { usesGoProfiles } from "@/lib/profile-mode";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { SEASON_01_START } from "@/lib/season";
 
 export async function GET(req: NextRequest) {
+ if(usesGoProfiles())return accountProxy("/api/leaderboard/me"+req.nextUrl.search,undefined,true);
+
   const { searchParams } = req.nextUrl;
   const section = searchParams.get("section") ?? "global"; // global | regional
   const period = searchParams.get("period") ?? "alltime";  // alltime | season

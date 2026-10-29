@@ -3,6 +3,8 @@
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
+import { usesGoProfiles } from "@/lib/profile-mode";
+import { saveGoProfile } from "@/lib/profile-client";
 import { createClient } from "@/utils/supabase/client";
 import SearchableSelect from "@/components/ui/SearchableSelect";
 import { COUNTRIES } from "@/lib/data/countries";
@@ -238,6 +240,10 @@ function RegisterContent() {
 
     const resolvedUsername = form.username.trim() || user.user_metadata?.username || null;
 
+    if(usesGoProfiles()){
+      try {await saveGoProfile({name:form.name,username:resolvedUsername ?? "",country:form.country||null,club:form.club||null},true);}
+      catch(e){setError(e instanceof Error?e.message:"Profile save failed");setLoading(false);return;}
+    } else {
     // Write profile row
     const { error: profileError } = await supabase.from("profiles").upsert({
       id: user.id,
@@ -253,6 +259,7 @@ function RegisterContent() {
       return;
     }
 
+    }
     // Mark onboarding complete in auth metadata — proxy reads this without a DB query.
     // Do NOT mirror username here: profiles.username is canonical; writing it to
     // user_metadata would go stale if the user later changes their handle.
@@ -260,8 +267,9 @@ function RegisterContent() {
       data: { onboarding_complete: true },
     });
     if (metaError) {
-      // Non-fatal: profile is written. Log and continue.
-      console.error("[register] updateUser error:", metaError.message);
+      setError("Profile saved. Please retry to finish refreshing your account session.");
+      setLoading(false);
+      return;
     }
 
     setLoading(false);

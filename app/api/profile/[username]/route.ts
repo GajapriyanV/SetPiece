@@ -1,3 +1,5 @@
+import { accountProxy } from "@/lib/server/account-proxy";
+import { usesGoProfiles } from "@/lib/profile-mode";
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 
@@ -6,6 +8,7 @@ export async function GET(
   { params }: { params: Promise<{ username: string }> }
 ) {
   const { username } = await params;
+  if(usesGoProfiles())return accountProxy("/api/profiles/"+encodeURIComponent(username),undefined,false);
   const supabase = await createClient();
 
   // ── Profile ───────────────────────────────────────────────────────────────────

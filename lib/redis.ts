@@ -18,12 +18,3 @@ export async function cacheUserProfile(
     { ex: PROFILE_TTL }
   );
 }
-
-export async function getCachedUserProfile(
-  userId: string
-): Promise<{ username: string; avatarUrl: string | null } | null> {
-  const raw = await redis.get(`sp:profile:${userId}`);
-  if (!raw) return null;
-  const data = typeof raw === "string" ? JSON.parse(raw) : raw as { username: string; avatarUrl: string | null };
-  return data;
-}

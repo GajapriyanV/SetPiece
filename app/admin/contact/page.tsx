@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { readOwnProfile } from "@/lib/profile-client";
 import { createClient } from "@/utils/supabase/client";
 
 interface Ticket {
@@ -34,6 +35,7 @@ export default function AdminContactPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"unreviewed" | "all">("unreviewed");
   const [accessDenied, setAccessDenied] = useState(false);
+  const [actionError,setActionError]=useState("");
   const [expanded, setExpanded] = useState<string | null>(null);
 
   useEffect(() => {
@@ -41,7 +43,7 @@ export default function AdminContactPage() {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push("/"); return; }
-      const { data: profile } = await supabase.from("profiles").select("is_admin").eq("id", user.id).single();
+      const profile = await readOwnProfile(supabase,user.id);
       if (!profile?.is_admin) { setAccessDenied(true); setLoading(false); return; }
       fetchTickets();
     };
@@ -65,12 +67,16 @@ export default function AdminContactPage() {
   };
 
   const markReviewed = async (ticketId: string) => {
-    await fetch(`/api/admin/contact/${ticketId}`, { method: "PATCH" });
+    setActionError("");
+    try {
+    const response=await fetch(`/api/admin/contact/${ticketId}`, { method: "PATCH" });
+    if(!response.ok)throw new Error();
     setTickets((prev) => prev.map((t) => t.id === ticketId ? { ...t, is_reviewed: true } : t));
     if (filter === "unreviewed") {
       setTickets((prev) => prev.filter((t) => t.id !== ticketId));
       if (expanded === ticketId) setExpanded(null);
     }
+    } catch {setActionError("Could not mark this item reviewed. Please retry.");}
   };
 
   if (accessDenied) {
@@ -84,6 +90,7 @@ export default function AdminContactPage() {
 
   return (
     <div style={{ paddingTop: "60px", minHeight: "100vh", background: "var(--dark)" }}>
+      {actionError && <p role="alert" style={{color:"var(--red)",padding:16}}>{actionError}</p>}
 
       {/* Header */}
       <div style={{ borderBottom: "1px solid var(--border)" }}>

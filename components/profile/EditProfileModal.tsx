@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { usesGoProfiles } from "@/lib/profile-mode";
+import { saveGoProfile, usernameAvailable } from "@/lib/profile-client";
 import { createClient } from "@/utils/supabase/client";
 import { COUNTRIES } from "@/lib/data/countries";
 import { ALL_CLUBS, CLUB_NAMES as CLUBS } from "@/lib/data/clubs";
@@ -68,12 +70,8 @@ export default function EditProfileModal({ initial, onClose, onSaved, openEmailS
       setUsernameError("");
       return;
     }
-    const { data } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("username", value.trim())
-      .maybeSingle();
-    setUsernameError(data ? "Username already taken" : "");
+    try { setUsernameError(await usernameAvailable(supabase,value.trim()) ? "" : "Username already taken"); }
+    catch { setUsernameError("Could not check username. Please retry."); }
   };
 
   useEffect(() => {
@@ -154,15 +152,8 @@ export default function EditProfileModal({ initial, onClose, onSaved, openEmailS
         return;
       }
       // Final uniqueness check in case the user didn't blur
-      const { data: taken } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("username", form.username.trim())
-        .maybeSingle();
-      if (taken) {
-        setError("Username already taken");
-        return;
-      }
+      try {if(!await usernameAvailable(supabase,form.username.trim())) {setError("Username already taken");return;}}
+      catch {setError("Could not check username. Please retry.");return;}
     }
 
     if (avatarError) return;
@@ -192,6 +183,15 @@ export default function EditProfileModal({ initial, onClose, onSaved, openEmailS
       newAvatarUrl = supabase.storage.from("avatars").getPublicUrl(path).data.publicUrl;
     }
 
+    if(usesGoProfiles()){
+      try {
+        const saved=await saveGoProfile({name:form.name.trim(),username:form.username.trim(),country:form.country||null,club:form.club||null,avatar_url:newAvatarUrl});
+        onSaved({name:saved.name ?? "",username:saved.username ?? "",country:saved.country,club:saved.club,avatar_url:saved.avatar_url,username_changed_at:saved.username_changed_at});
+        onClose();
+      } catch(e){setError(e instanceof Error?e.message:"Profile save failed");}
+      finally{setLoading(false);}
+      return;
+    }
     const now = new Date().toISOString();
     const { error: dbError } = await supabase.from("profiles").update({
       name: form.name.trim(),

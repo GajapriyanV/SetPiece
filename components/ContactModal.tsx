@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { readOwnProfile } from "@/lib/profile-client";
 import { createClient } from "@/utils/supabase/client";
 import Link from "next/link";
 
@@ -21,11 +22,7 @@ export default function ContactModal({ onClose }: Props) {
     const supabase = createClient();
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { setAuthLoading(false); return; }
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("name, username")
-        .eq("id", user.id)
-        .single();
+      const profile = await readOwnProfile(supabase,user.id);
       setUserInfo({
         name: profile?.name || profile?.username || "Unknown",
         email: user.email ?? "",
@@ -39,6 +36,7 @@ export default function ContactModal({ onClose }: Props) {
     setError(null);
     setSubmitting(true);
 
+    try {
     const res = await fetch("/api/contact", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -54,6 +52,7 @@ export default function ContactModal({ onClose }: Props) {
     }
 
     setDone(true);
+    } catch {setError("Could not send your request. Please retry.");} finally {setSubmitting(false);}
   };
 
   const handleBackdrop = (e: React.MouseEvent<HTMLDivElement>) => {

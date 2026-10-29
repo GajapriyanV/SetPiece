@@ -1,3 +1,4 @@
+import { usesGoProfiles } from "@/lib/profile-mode";
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 
@@ -39,6 +40,8 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${origin}${next}`);
   }
 
+  // Go onboarding creates the canonical row atomically with the completed form.
+  if(usesGoProfiles()) return NextResponse.redirect(`${origin}/register?complete=1`);
   // Seed a minimal profile row if one doesn't exist yet
   const { data: existing } = await supabase
     .from("profiles")

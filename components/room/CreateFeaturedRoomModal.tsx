@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { goRoomsEnabled, createRoom } from "@/lib/realtime/config";
 import { createClient } from "@/utils/supabase/client";
 import { connectSocket } from "@/lib/socket";
 
@@ -61,6 +62,10 @@ export default function CreateFeaturedRoomModal({ onClose }: { onClose: () => vo
         return;
       }
 
+      if (goRoomsEnabled) {
+        router.push(await createRoom(session.access_token, valid.map(t => ({ topic: t.topic.trim(), sideALabel: t.sideALabel.trim(), sideBLabel: t.sideBLabel.trim() })), true));
+        return;
+      }
       const socket = connectSocket(session.access_token);
 
       if (!socket.connected) {

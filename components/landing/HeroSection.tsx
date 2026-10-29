@@ -25,7 +25,7 @@ export default function HeroSection() {
     debatesToday: number;
     debatesPctChange: number | null;
     votesCastAllTime: number;
-    debatingNow: number;
+    debatingNow: number | null;
   } | null>(null);
 
   useEffect(() => {
@@ -37,7 +37,20 @@ export default function HeroSection() {
   }, [supabase.auth]);
 
   useEffect(() => {
-    fetch("/api/stats").then((r) => r.json()).then(setStats);
+    const controller = new AbortController();
+    let active = true;
+    async function loadStats() {
+      try {
+        const response = await fetch("/api/stats", { signal: controller.signal });
+        if (!response.ok) return;
+        const data = await response.json();
+        if (active) setStats(data);
+      } catch {
+        // Optional statistics keep their placeholders if unavailable or aborted.
+      }
+    }
+    void loadStats();
+    return () => { active = false; controller.abort(); };
   }, []);
 
   const handleEnterPitch = () => {

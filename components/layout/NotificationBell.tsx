@@ -33,46 +33,50 @@ export default function NotificationBell() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loaded, setLoaded] = useState(false);
+  const [error,setError]=useState("");
+  const generation=useRef(0);
+  const owner=useRef<string|null>(null);
+  const requestSequence=useRef(0);
   const ref = useRef<HTMLDivElement>(null);
 
   const fetchNotifications = useCallback(async () => {
-    const res = await fetch("/api/notifications");
-    if (!res.ok) return;
-    const data = await res.json();
-    setNotifications(data.notifications ?? []);
-    setUnreadCount(data.unreadCount ?? 0);
-    setLoaded(true);
-  }, []);
+    if(!owner.current)return;
+    const identity=generation.current,sequence=++requestSequence.current;
+    try{
+      const res=await fetch("/api/notifications",{cache:"no-store",signal:AbortSignal.timeout(10000)});
+      if(!res.ok)throw new Error("Notification request failed");
+      const data=await res.json();
+      if(identity!==generation.current||sequence!==requestSequence.current)return;
+      setNotifications(data.notifications??[]);setUnreadCount(data.unreadCount??0);setLoaded(true);setError("");
+    }catch{
+      if(identity!==generation.current||sequence!==requestSequence.current)return;
+      // Keep the bell reachable when the initial request fails, including an outage.
+      setLoaded(true);setError("Could not load notifications. Please retry.");
+    }
+  },[]);
 
-  useEffect(() => {
-    const supabase = createClient();
-    let channel: ReturnType<typeof supabase.channel> | null = null;
-
-    const init = async () => {
-      await fetchNotifications();
-
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      // Subscribe to new inserts on this user's notifications only
-      channel = supabase
-        .channel("notifications-live")
-        .on(
-          "postgres_changes",
-          { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` },
-          () => { fetchNotifications(); }
-        )
-        .on(
-          "postgres_changes",
-          { event: "UPDATE", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` },
-          () => { fetchNotifications(); }
-        )
+  useEffect(()=>{
+    const supabase=createClient();let disposed=false;let activeGeneration=generation.current;
+    let channel:ReturnType<typeof supabase.channel>|null=null;
+    const bindUser=(id:string|null)=>{
+      if(disposed||owner.current===id)return;
+      activeGeneration=++generation.current;owner.current=id;channel?.unsubscribe();channel=null;
+      setNotifications([]);setUnreadCount(0);setLoaded(false);setError("");
+      if(!id)return;
+      void fetchNotifications();
+      channel=supabase.channel("notifications-live")
+        .on("postgres_changes",{event:"INSERT",schema:"public",table:"notifications",filter:`user_id=eq.${id}`},()=>{void fetchNotifications();})
+        .on("postgres_changes",{event:"UPDATE",schema:"public",table:"notifications",filter:`user_id=eq.${id}`},()=>{void fetchNotifications();})
         .subscribe();
     };
-
-    init();
-    return () => { channel?.unsubscribe(); };
-  }, [fetchNotifications]);
+    let authEvent=0;
+    const {data:{subscription}}=supabase.auth.onAuthStateChange((_event,session)=>{
+      authEvent++;bindUser(session?.user.id??null);
+    });
+    const atStart=authEvent;
+    supabase.auth.getUser().then(({data:{user}})=>{if(authEvent===atStart)bindUser(user?.id??null);}).catch(()=>{});
+    return ()=>{disposed=true;generation.current=activeGeneration+1;owner.current=null;subscription.unsubscribe();channel?.unsubscribe();};
+  },[fetchNotifications]);
 
   // Close on outside click
   useEffect(() => {
@@ -88,24 +92,25 @@ export default function NotificationBell() {
     if (!open) fetchNotifications();
   };
 
-  const handleMarkAllRead = async () => {
-    await fetch("/api/notifications", { method: "PATCH" });
-    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
-    setUnreadCount(0);
+  const handleMarkAllRead=async()=>{
+    const identity=generation.current;setError("");
+    try{const res=await fetch("/api/notifications",{method:"PATCH"});if(!res.ok)throw new Error();
+      if(identity!==generation.current)return;
+      setNotifications(prev=>prev.map(n=>({...n,is_read:true})));setUnreadCount(0);
+      void fetchNotifications();
+    }catch{if(identity===generation.current)setError("Could not mark notifications read. Please retry.");}
   };
-
-  const handleNotificationClick = async (notif: NotificationItem) => {
-    if (!notif.is_read) {
-      await fetch(`/api/notifications/${notif.id}`, { method: "PATCH" });
-      setNotifications((prev) => prev.map((n) => n.id === notif.id ? { ...n, is_read: true } : n));
-      setUnreadCount((c) => Math.max(0, c - 1));
+  const handleNotificationClick=async(notif:NotificationItem)=>{
+    const identity=generation.current;setError("");
+    if(!notif.is_read){
+      try{const res=await fetch(`/api/notifications/${notif.id}`,{method:"PATCH"});if(!res.ok)throw new Error();
+        if(identity!==generation.current)return;
+        setNotifications(prev=>prev.map(n=>n.id===notif.id?{...n,is_read:true}:n));setUnreadCount(c=>Math.max(0,c-1));
+      }catch{if(identity===generation.current)setError("Could not mark this notification read. Please retry.");return;}
     }
+    if(identity!==generation.current)return;
     setOpen(false);
-    if (notif.type === "thread_like") {
-      router.push(`/forum/${notif.thread_id}`);
-    } else {
-      router.push(`/forum/${notif.thread_id}#reply-${notif.reply_id}`);
-    }
+    router.push(notif.type==="thread_like"?`/forum/${notif.thread_id}`:`/forum/${notif.thread_id}#reply-${notif.reply_id}`);
   };
 
   if (!loaded) return null;
@@ -171,6 +176,10 @@ export default function NotificationBell() {
           zIndex: 600,
           boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
         }}>
+          {error && <div style={{padding:12}}>
+            <p role="alert" style={{color:"var(--red)"}}>{error}</p>
+            <button type="button" onClick={()=>{void fetchNotifications();}}>Refresh notifications</button>
+          </div>}
           {/* Header */}
           <div style={{
             display: "flex",
@@ -222,7 +231,7 @@ export default function NotificationBell() {
                 color: "var(--dim)",
                 letterSpacing: "1px",
               }}>
-                No notifications yet.
+                {error ? "Notifications are temporarily unavailable." : "No notifications yet."}
               </div>
             ) : (
               notifications.map((notif) => (

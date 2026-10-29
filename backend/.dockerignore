@@ -1,0 +1,19 @@
+**
+!go.mod
+!go.sum
+!cmd/
+!cmd/**
+!internal/
+!internal/**
+!migrations/
+!migrations/**
+**/*_test.go
+**/testdata/
+**/testdata/**
+
+# Keep local secrets/artifacts excluded even beneath an allowed source directory.
+**/.env*
+**/*.pem
+**/*.key
+**/*.local.*
+**/*.dump

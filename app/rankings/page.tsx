@@ -33,7 +33,7 @@ interface Player {
 
 interface MyStats {
   userId: string;
-  rank: number;
+  rank: number | null;
   wins: number;
   losses: number;
   draws: number;
@@ -793,14 +793,17 @@ export default function RankingsPage() {
 
   // Fetch my stats — re-fetch when section/period changes
   useEffect(() => {
-    const params = new URLSearchParams({ section, period });
-    fetch(`/api/leaderboard/me?${params}`)
+    const controller=new AbortController();
+    setMyStats(null);
+    const params = new URLSearchParams({ type: mode, section, period });
+    fetch(`/api/leaderboard/me?${params}`,{signal:controller.signal})
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
-        if (data) setMyStats(data);
+        if (!controller.signal.aborted) setMyStats(data);
       })
-      .catch(() => {});
-  }, [section, period]);
+      .catch(() => {if(!controller.signal.aborted)setMyStats(null);});
+    return ()=>controller.abort();
+  }, [mode, section, period]);
 
   // Scroll reveal
   useEffect(() => {
@@ -1384,7 +1387,7 @@ export default function RankingsPage() {
                       marginBottom: "4px",
                     }}
                   >
-                    #{myStats.rank}
+                    {myStats.rank == null ? "—" : `#${myStats.rank}`}
                   </div>
                   <div
                     style={{

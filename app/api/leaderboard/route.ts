@@ -1,3 +1,5 @@
+import { accountProxy } from "@/lib/server/account-proxy";
+import { usesGoProfiles } from "@/lib/profile-mode";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { SEASON_01_START } from "@/lib/season";
@@ -8,6 +10,8 @@ import { SEASON_01_START } from "@/lib/season";
 const PAGE_SIZE = 20;
 
 export async function GET(req: NextRequest) {
+ if(usesGoProfiles())return accountProxy("/api/leaderboard"+req.nextUrl.search,undefined,req.nextUrl.searchParams.get("section")==="regional");
+
   const { searchParams } = req.nextUrl;
   const type = searchParams.get("type") ?? "unranked"; // unranked | ranked
   const section = searchParams.get("section") ?? "global"; // global | regional

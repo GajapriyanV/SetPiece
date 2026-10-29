@@ -37,18 +37,19 @@ export default function RoomPage() {
   }, [error, state.closed, router]);
 
   // Debate cancelled notice — auto-dismiss after 5s
-  const [cancelNotice, setCancelNotice] = useState<{ reason: string; username: string } | null>(null);
+  const [dismissedNotice, setDismissedNotice] = useState<{ reason: string; username: string } | null>(null);
+  const cancelNotice = state.debateCancelled === dismissedNotice ? null : state.debateCancelled;
   useEffect(() => {
     if (!state.debateCancelled) return;
-    setCancelNotice(state.debateCancelled);
-    const timeout = setTimeout(() => setCancelNotice(null), 5000);
+    const timeout = setTimeout(() => setDismissedNotice(state.debateCancelled), 5000);
     return () => clearTimeout(timeout);
   }, [state.debateCancelled]);
 
   // Closing countdown for featured rooms
-  const [closingRemaining, setClosingRemaining] = useState<number | null>(null);
+  const [closingTick, setClosingRemaining] = useState<number | null>(null);
+  const closingRemaining = state.closingAt ? closingTick : null;
   useEffect(() => {
-    if (!state.closingAt) { setClosingRemaining(null); return; }
+    if (!state.closingAt) return;
     function tick() {
       const left = Math.max(0, Math.ceil((state.closingAt! - Date.now()) / 1000));
       setClosingRemaining(left);
@@ -56,9 +57,9 @@ export default function RoomPage() {
         router.push("/rooms");
       }
     }
-    tick();
+    const first = setTimeout(tick, 0);
     const id = setInterval(tick, 250);
-    return () => clearInterval(id);
+    return () => { clearTimeout(first); clearInterval(id); };
   }, [state.closingAt, router]);
 
   if (isLoading) {
@@ -165,6 +166,11 @@ export default function RoomPage() {
         featuredMeta={state.featuredMeta}
       />
 
+      {(state.connectionNotice || state.actionError) && (
+        <div role="status" style={{ padding: "12px 24px", color: "var(--g)", background: "var(--card)" }}>
+          {state.connectionNotice || state.actionError}
+        </div>
+      )}
       {/* Debate cancelled notice */}
       {cancelNotice && (
         <div

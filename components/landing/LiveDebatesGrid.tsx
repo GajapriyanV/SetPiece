@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { listRooms } from "@/lib/realtime/config";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
@@ -272,8 +273,7 @@ export default function LiveDebatesGrid() {
   }, []);
 
   useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_SOCKET_URL}/api/rooms`)
-      .then((r) => r.json())
+    listRooms()
       .then((data: Room[]) => {
         const sorted = data
           .filter((r) => r.status !== "results")

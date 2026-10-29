@@ -2,33 +2,19 @@
 
 import { useEffect, useReducer, useCallback, useRef } from "react";
 import { useSocket } from "./useSocket";
+import { useGoRoom } from "./useGoRoom";
+import { roomTarget } from "@/lib/realtime/config";
+import { initialState, type RoomUIState } from "@/lib/realtime/state";
 import type {
   FullRoomState,
-  FeaturedMetaBrief,
-  RoomMember,
   Side,
   UserBrief,
-  PhaseState,
   ChatMessage,
   ResultsData,
   PhaseName,
 } from "@/types/socket";
 
 // Extended state with UI-specific fields
-interface RoomUIState extends FullRoomState {
-  voteWindowEndsAt: number | null;
-  results: ResultsData | null;
-  countdown: number | null; // debate starting countdown
-  myVote: Side | null;
-  closingAt: number | null;
-  sidePickEndsAt: number | null;
-  skipVotes: { count: number; required: number; votedUserIds: string[] } | null;
-  closed: boolean;
-  closedReason: string | null;
-  debateCancelled: { reason: string; username: string } | null;
-  disconnectedDebater: { userId: string; username: string } | null;
-}
-
 type RoomAction =
   | { type: "SET_STATE"; state: FullRoomState }
   | { type: "MEMBER_JOINED"; userId: string; username: string; avatarUrl: string | null }
@@ -56,34 +42,6 @@ type RoomAction =
   | { type: "ROOM_CLOSING"; reason: string; closingAt: number }
   | { type: "ROOM_CLOSED"; reason: string }
   | { type: "FEATURED_SKIP_VOTES"; count: number; required: number; votedUserIds: string[] };
-
-const initialState: RoomUIState = {
-  roomId: "",
-  status: "lobby",
-  topic: "",
-  sideALabel: "",
-  sideBLabel: "",
-  members: [],
-  debaterA: null,
-  debaterB: null,
-  phase: null,
-  chat: [],
-  debateId: null,
-  votes: null,
-  isFeatured: false,
-  featuredMeta: null,
-  voteWindowEndsAt: null,
-  results: null,
-  countdown: null,
-  myVote: null,
-  closingAt: null,
-  sidePickEndsAt: null,
-  skipVotes: null,
-  closed: false,
-  closedReason: null,
-  debateCancelled: null,
-  disconnectedDebater: null,
-};
 
 function roomReducer(state: RoomUIState, action: RoomAction): RoomUIState {
   switch (action.type) {
@@ -259,8 +217,8 @@ function roomReducer(state: RoomUIState, action: RoomAction): RoomUIState {
   }
 }
 
-export function useRoom(roomId: string) {
-  const { socket, isConnected, error: socketError } = useSocket();
+function useLegacyRoom(roomId: string, enabled: boolean) {
+  const { socket, isConnected, error: socketError } = useSocket(enabled);
   const [state, dispatch] = useReducer(roomReducer, initialState);
   const [isLoading, setIsLoading] = useReducerCompat(true);
   const [error, setError] = useReducerCompat<string | null>(null);
@@ -268,7 +226,7 @@ export function useRoom(roomId: string) {
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    if (!socket || !isConnected || joinedRef.current) return;
+    if (!enabled || !socket || !isConnected || joinedRef.current) return;
 
     joinedRef.current = true;
 
@@ -403,7 +361,7 @@ export function useRoom(roomId: string) {
     socket.emit("room:join", { roomId });
 
     return () => {
-      socket.emit("room:leave");
+      if (socket.connected) socket.emit("room:leave");
       socket.off("room:joined");
       socket.off("room:state_sync");
       socket.off("room:error");
@@ -435,7 +393,7 @@ export function useRoom(roomId: string) {
       if (countdownRef.current) clearInterval(countdownRef.current);
       joinedRef.current = false;
     };
-  }, [socket, isConnected, roomId]);
+  }, [socket, isConnected, roomId, enabled, setError, setIsLoading]);
 
   // Actions
   const pickSide = useCallback(
@@ -488,4 +446,11 @@ export function useRoom(roomId: string) {
 function useReducerCompat<T>(initial: T): [T, (v: T) => void] {
   const [state, dispatch] = useReducer((_: T, action: T) => action, initial);
   return [state, dispatch];
+}
+
+export function useRoom(routeId: string) {
+ const target=roomTarget(routeId);
+ const go=useGoRoom(target.id,target.backend==="go");
+ const legacy=useLegacyRoom(target.id,target.backend==="legacy");
+ return target.backend==="go" ? go : legacy;
 }

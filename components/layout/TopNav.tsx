@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import SignInModal from "@/components/auth/SignInModal";
 import Image from "next/image";
+import { readOwnProfile } from "@/lib/profile-client";
 import { createClient } from "@/utils/supabase/client";
 import type { User } from "@supabase/supabase-js";
 import NotificationBell from "@/components/layout/NotificationBell";
@@ -22,9 +23,9 @@ export default function TopNav() {
   const adminMenuRef = useRef<HTMLDivElement>(null);
 
   const fetchProfileUsername = async (userId: string) => {
-    const { data } = await supabase.from("profiles").select("username, is_admin").eq("id", userId).single();
-    if (data?.username) setProfileUsername(data.username);
-    if (data?.is_admin) setIsAdmin(true);
+    const data = await readOwnProfile(supabase,userId);
+    setProfileUsername(data?.username ?? null);
+    setIsAdmin(data?.is_admin ?? false);
   };
 
   useEffect(() => {
@@ -39,7 +40,7 @@ export default function TopNav() {
       (_event: string, session: { user: User | null } | null) => {
         setUser(session?.user ?? null);
         if (session?.user) fetchProfileUsername(session.user.id);
-        else setProfileUsername(null);
+        else {setProfileUsername(null);setIsAdmin(false);}
       }
     );
 

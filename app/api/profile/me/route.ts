@@ -1,18 +1,24 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
-import { cacheUserProfile } from "@/lib/redis";
+import { accountProxy } from "@/lib/server/account-proxy";
+import { usesGoProfiles } from "@/lib/profile-mode";
+import { usesGoProfileRead, forwardProfileRead } from "@/lib/server/profile-backend";
 
 export async function PATCH(request: Request) {
+ if(usesGoProfiles()) return accountProxy('/api/account/profile',request);
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
 
-  const { username, avatar_url } = await request.json();
-  await cacheUserProfile(user.id, username, avatar_url ?? null);
+  const {data:profile,error}=await supabase.from("profiles").select("username,avatar_url").eq("id",user.id).single();
+  if(error || !profile)return NextResponse.json({error:"Profile not found"},{status:404});
+  try {const {cacheUserProfile}=await import("@/lib/redis");await cacheUserProfile(user.id,profile.username,profile.avatar_url ?? null);}
+  catch {return NextResponse.json({ok:true,cacheUpdated:false});}
   return NextResponse.json({ ok: true });
 }
 
 export async function GET() {
+ if(usesGoProfiles()) return accountProxy('/api/account/profile');
   const supabase = await createClient();
 
   const {
@@ -23,6 +29,15 @@ export async function GET() {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
+  if (usesGoProfileRead()) {
+    // getUser above validates/refreshes the cookie session. Forward its user
+    // access token; the Go backend independently validates it again.
+    const { data: { session }, error } = await supabase.auth.getSession();
+    if (error || !session || session.user.id !== user.id) {
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
+    return forwardProfileRead(session.access_token);
+  }
   // ── Profile ───────────────────────────────────────────────────────────────────
   const { data: profile } = await supabase
     .from("profiles")

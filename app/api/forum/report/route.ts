@@ -1,9 +1,11 @@
+import { communityProxy, usesGoCommunity } from "@/lib/server/community-proxy";
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 
 const VALID_REASONS = ["Spam", "Hate speech", "Misinformation", "Harassment", "Off-topic", "Other"];
 
 export async function POST(request: Request) {
+  if(usesGoCommunity())return communityProxy(request,true);
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });

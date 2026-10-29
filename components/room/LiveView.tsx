@@ -169,7 +169,6 @@ export default function LiveView({
   members,
   countdown,
   roomId,
-  currentUserId,
   disconnectedDebater,
 }: {
   phase: PhaseState | null;
@@ -184,7 +183,7 @@ export default function LiveView({
   disconnectedDebater?: { userId: string; username: string } | null;
 }) {
   const secondsLeft = useServerTimer(phase?.endsAt ?? null);
-  const { isSpeaking, canPublish, micEnabled, isReconnecting, needsAudioUnlock, toggleMic, unlockAudio } = useLiveKit(roomId);
+  const { isSpeaking, canPublish, micEnabled, isReconnecting, needsAudioUnlock, mediaError, retryAudio, toggleMic, unlockAudio } = useLiveKit(roomId);
 
   // If we're in the starting countdown
   if (countdown !== null && countdown > 0) {
@@ -221,7 +220,6 @@ export default function LiveView({
   const ss = String(secondsLeft % 60).padStart(2, "0");
 
   const phaseIndex = phase?.index ?? 0;
-  const phaseTotal = phase ? (phase.endsAt - Date.now() + secondsLeft * 1000) : 1;
   // Rough progress within current phase segment
   const phasePct = phase
     ? Math.max(0, Math.min(100, 100 - (secondsLeft / getPhaseTotal(phase.name)) * 100))
@@ -236,6 +234,11 @@ export default function LiveView({
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "36px 40px 0" }}>
 
+      {mediaError && (
+        <div role="status" style={{ padding: "12px", color: "var(--g)" }}>
+          {mediaError} <button onClick={retryAudio}>Reconnect audio</button>
+        </div>
+      )}
       {/* Reconnecting banner */}
       {isReconnecting && (
         <div style={{

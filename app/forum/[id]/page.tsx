@@ -1,5 +1,7 @@
 "use client";
 
+import { readOwnProfile } from "@/lib/profile-client";
+import { mergeReplyPage } from "@/lib/forum-state";
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -113,6 +115,7 @@ function ReportModal({ targetType, targetId, onClose }: { targetType: "thread" |
     if (!reason) { setError("Select a reason."); return; }
     if (reason === "Other" && !customReason.trim()) { setError("Please describe the issue."); return; }
     setLoading(true);
+    try {
     const res = await fetch("/api/forum/report", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -121,6 +124,7 @@ function ReportModal({ targetType, targetId, onClose }: { targetType: "thread" |
     setLoading(false);
     if (res.ok) { setDone(true); setTimeout(onClose, 1500); }
     else { setError("Failed to submit report."); }
+    } catch {setError("Could not submit the report. Please retry.");} finally {setLoading(false);}
   };
 
   return (
@@ -332,6 +336,10 @@ export default function ThreadPage() {
   const [replyingTo, setReplyingTo] = useState<string | null>(null); // reply ID being replied to
   const [submitting, setSubmitting] = useState(false);
   const [replyError, setReplyError] = useState("");
+  const [actionError,setActionError]=useState("");
+  const [nextReplyPage,setNextReplyPage]=useState<number|null>(null);
+  const [loadingMore,setLoadingMore]=useState(false);
+  const pendingLikes=useRef(new Set<string>());
 
   const [reportTarget, setReportTarget] = useState<{ type: "thread" | "reply"; id: string } | null>(null);
 
@@ -345,45 +353,64 @@ export default function ThreadPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         setCurrentUserId(user.id);
-        const { data: profile } = await supabase.from("profiles").select("is_admin").eq("id", user.id).single();
+        const profile = await readOwnProfile(supabase,user.id);
         setIsAdmin(profile?.is_admin === true);
       }
 
       // Fetch thread
       const res = await fetch(`/api/forum/${id}`);
       if (res.status === 404) { setNotFound(true); setLoading(false); return; }
+      if(!res.ok)throw new Error("Could not load this thread.");
       const data = await res.json();
       setThread(data.thread);
-      setReplies(data.replies ?? []);
+      setReplies(Array.isArray(data.replyRows)?mergeReplyPage<Reply>([],data.replyRows):data.replies ?? []);
+      setNextReplyPage(data.nextReplyPage ?? null);
       setLoading(false);
     };
-    init();
+    init().catch(()=>{setActionError("Could not load this thread. Please refresh to retry.");setLoading(false);});
   }, [id]);
 
   const handleThreadLike = async () => {
-    if (!currentUserId || !thread) return;
-    const res = await fetch(`/api/forum/${id}/like`, { method: "POST" });
-    const data = await res.json();
-    setThread((t) => t ? { ...t, user_liked: data.liked, upvotes_count: t.upvotes_count + (data.liked ? 1 : -1) } : t);
+    if(!currentUserId||!thread||pendingLikes.current.has(id))return;
+    pendingLikes.current.add(id);setActionError("");
+    try{
+      const res=await fetch(`/api/forum/${id}/like`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({liked:!thread.user_liked})});
+      const data=await res.json();if(!res.ok)throw new Error(data.error??"Could not update like");
+      setThread(t=>t?{...t,user_liked:data.liked,upvotes_count:data.upvotes_count??t.upvotes_count+(data.liked===t.user_liked?0:data.liked?1:-1)}:t);
+    }catch(e){setActionError(e instanceof Error?e.message:"Could not update like");}
+    finally{pendingLikes.current.delete(id);}
   };
-
-  const handleReplyLike = async (replyId: string) => {
-    if (!currentUserId) return;
-    const res = await fetch(`/api/forum/reply/${replyId}/like`, { method: "POST" });
-    const data = await res.json();
-    const delta = data.liked ? 1 : -1;
-    setReplies((prev) => updateReplyInTree(prev, replyId, (r) => ({ ...r, user_liked: data.liked, upvotes_count: r.upvotes_count + delta })));
+  const handleReplyLike = async (replyId:string) => {
+    const reply=findReply(replies,replyId);
+    if(!currentUserId||!reply||pendingLikes.current.has(replyId))return;
+    pendingLikes.current.add(replyId);setActionError("");
+    try{
+      const res=await fetch(`/api/forum/reply/${replyId}/like`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({liked:!reply.user_liked})});
+      const data=await res.json();if(!res.ok)throw new Error(data.error??"Could not update like");
+      setReplies(prev=>updateReplyInTree(prev,replyId,r=>({...r,user_liked:data.liked,upvotes_count:data.upvotes_count??r.upvotes_count+(data.liked===r.user_liked?0:data.liked?1:-1)})));
+    }catch(e){setActionError(e instanceof Error?e.message:"Could not update like");}
+    finally{pendingLikes.current.delete(replyId);}
   };
-
-  const handleReplyDelete = async (replyId: string) => {
-    await fetch(`/api/forum/reply/${replyId}`, { method: "DELETE" });
-    setReplies((prev) => removeReplyFromTree(prev, replyId));
+  const handleReplyDelete = async(replyId:string)=>{
+    setActionError("");
+    try{const res=await fetch(`/api/forum/reply/${replyId}`,{method:"DELETE"});if(!res.ok)throw new Error("Could not delete reply");setReplies(prev=>removeReplyFromTree(prev,replyId));
+      const refreshed=await fetch(`/api/forum/${id}`);if(refreshed.ok){const data=await refreshed.json();setThread(data.thread);setReplies(Array.isArray(data.replyRows)?mergeReplyPage<Reply>([],data.replyRows):data.replies??[]);setNextReplyPage(data.nextReplyPage??null);}}
+    catch(e){setActionError(e instanceof Error?e.message:"Could not delete reply");}
   };
-
-  const handleThreadDelete = async () => {
-    if (!confirm("Delete this thread? This cannot be undone.")) return;
-    await fetch(`/api/forum/${id}`, { method: "DELETE" });
-    router.push("/forum");
+  const handleThreadDelete = async()=>{
+    if(!confirm("Delete this thread? This cannot be undone."))return;
+    setActionError("");
+    try{const res=await fetch(`/api/forum/${id}`,{method:"DELETE"});if(!res.ok)throw new Error("Could not delete thread");router.push("/forum");}
+    catch(e){setActionError(e instanceof Error?e.message:"Could not delete thread");}
+  };
+  const loadMoreReplies = async()=>{
+    if(nextReplyPage==null||loadingMore)return;
+    setLoadingMore(true);setActionError("");
+    try{
+      const res=await fetch(`/api/forum/${id}?reply_page=${nextReplyPage}`);const data=await res.json();
+      if(!res.ok)throw new Error(data.error??"Could not load replies");
+      setReplies(prev=>mergeReplyPage<Reply>(prev,data.replyRows??[]));setNextReplyPage(data.nextReplyPage??null);
+    }catch(e){setActionError(e instanceof Error?e.message:"Could not load replies");}finally{setLoadingMore(false);}
   };
 
   const handleReplyTo = (replyId: string) => {
@@ -395,6 +422,7 @@ export default function ThreadPage() {
     if (!replyBody.trim()) { setReplyError("Reply cannot be empty."); return; }
     setSubmitting(true);
     setReplyError("");
+    try {
     const res = await fetch(`/api/forum/${id}/reply`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -413,6 +441,7 @@ export default function ThreadPage() {
     setReplyBody("");
     setReplyingTo(null);
     setThread((t) => t ? { ...t, reply_count: t.reply_count + 1 } : t);
+    } catch {setReplyError("Could not post reply. Please retry.");} finally {setSubmitting(false);}
   };
 
   if (loading) {
@@ -426,7 +455,7 @@ export default function ThreadPage() {
   if (notFound || !thread) {
     return (
       <div style={{ paddingTop: "60px", minHeight: "100vh", background: "var(--dark)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "16px" }}>
-        <div style={{ fontFamily: "var(--font-mono, 'Roboto Mono', monospace)", fontSize: "11px", color: "var(--red)", letterSpacing: "2px", textTransform: "uppercase" }}>Thread not found.</div>
+        <div style={{ fontFamily: "var(--font-mono, 'Roboto Mono', monospace)", fontSize: "11px", color: "var(--red)", letterSpacing: "2px", textTransform: "uppercase" }}>{actionError || "Thread not found."}</div>
         <Link href="/forum" style={{ fontFamily: "var(--font-mono, 'Roboto Mono', monospace)", fontSize: "10px", color: "var(--dim)", letterSpacing: "2px", textTransform: "uppercase", textDecoration: "none", borderBottom: "1px solid var(--border2)" }}>← Back to Forum</Link>
       </div>
     );
@@ -513,8 +542,12 @@ export default function ThreadPage() {
               {isAdmin && (
                 <button
                   onClick={async () => {
-                    await fetch(`/api/forum/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ is_featured: !thread.is_featured }) });
-                    setThread((t) => t ? { ...t, is_featured: !t.is_featured } : t);
+                    try {
+                    const featured = !thread.is_featured;
+                    const response=await fetch(`/api/forum/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ is_featured: featured }) });
+                    if(!response.ok){setActionError("Could not update this thread.");return;}
+                    setThread((t) => t ? { ...t, is_featured: featured } : t);
+                    } catch {setActionError("Could not update this thread. Please retry.");}
                   }}
                   style={{ padding: "4px 10px", border: "1px solid var(--border)", background: "transparent", color: "var(--dim)", fontFamily: "var(--font-mono, 'Roboto Mono', monospace)", fontSize: "9px", letterSpacing: "1.5px", textTransform: "uppercase", cursor: "pointer", transition: "all 0.15s" }}
                 >
@@ -525,6 +558,7 @@ export default function ThreadPage() {
           </div>
         </div>
 
+        {actionError && <p role="alert" style={{color:"var(--red)"}}>{actionError}</p>}
         {/* Replies section header */}
         <div style={{ fontFamily: "var(--font-mono, 'Roboto Mono', monospace)", fontSize: "9px", letterSpacing: "3px", textTransform: "uppercase", color: "var(--dim)", marginBottom: "16px" }}>
           {replies.length} {replies.length === 1 ? "Reply" : "Replies"}
@@ -550,6 +584,7 @@ export default function ThreadPage() {
           </div>
         )}
 
+        {nextReplyPage!=null && <button onClick={loadMoreReplies} disabled={loadingMore} style={{marginBottom:24,padding:"10px 18px",background:"var(--dark2)",color:"var(--text)",border:"1px solid var(--border)"}}>{loadingMore?"Loading replies…":"Load more replies"}</button>}
         {/* Reply input */}
         {!thread.is_closed && currentUserId ? (
           <div style={{ background: "var(--dark2)", border: "1px solid var(--border)", padding: "20px 24px" }}>

@@ -1,5 +1,6 @@
 "use client";
 
+import { readOwnProfile } from "@/lib/profile-client";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
@@ -66,6 +67,7 @@ function NewThreadModal({ isAdmin, onClose, onCreated }: { isAdmin: boolean; onC
     if (!title.trim() || !body.trim()) { setError("Title and body are required."); return; }
     setLoading(true);
     setError("");
+    try {
     const res = await fetch("/api/forum", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -75,6 +77,7 @@ function NewThreadModal({ isAdmin, onClose, onCreated }: { isAdmin: boolean; onC
     setLoading(false);
     if (!res.ok) { setError(data.error ?? "Failed to create thread."); return; }
     onCreated(data.id);
+    } catch {setError("Could not create the thread. Please retry.");} finally {setLoading(false);}
   };
 
   return (
@@ -330,6 +333,8 @@ function CategoryDropdown({ value, onChange }: { value: string; onChange: (v: st
 
 export default function ForumPage() {
   const [data, setData] = useState<ApiResponse | null>(null);
+  const [fetchError,setFetchError]=useState("");
+  const fetchSequence=useRef(0);
   const [loading, setLoading] = useState(true);
   const [flair, setFlair] = useState("All");
   const [sort, setSort] = useState<"newest" | "top">("newest");
@@ -345,7 +350,7 @@ export default function ForumPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         setUserId(user.id);
-        const { data: profile } = await supabase.from("profiles").select("is_admin").eq("id", user.id).single();
+        const profile = await readOwnProfile(supabase,user.id);
         setIsAdmin(profile?.is_admin === true);
       }
     };
@@ -354,13 +359,17 @@ export default function ForumPage() {
   }, []);
 
   const fetchThreads = async () => {
+    const sequence=++fetchSequence.current;setFetchError("");
     setLoading(true);
+    try {
     const params = new URLSearchParams({ sort, page: String(page) });
     if (flair !== "All") params.set("flair", flair);
     const res = await fetch(`/api/forum?${params}`);
+    if(!res.ok)throw new Error();
     const json = await res.json();
-    setData(json);
-    setLoading(false);
+    if(sequence===fetchSequence.current)setData(json);
+    } catch {if(sequence===fetchSequence.current){setData(null);setFetchError("Could not load discussions. Please refresh to retry.");}}
+    finally{if(sequence===fetchSequence.current)setLoading(false);}
   };
 
   useEffect(() => { fetchThreads(); }, [flair, sort, page]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -370,6 +379,7 @@ export default function ForumPage() {
   return (
     <div style={{ paddingTop: "60px", minHeight: "100vh", background: "var(--dark)" }}>
 
+      {fetchError && <p role="alert" style={{color:"var(--red)",padding:16}}>{fetchError}</p>}
       {/* Header */}
       <div style={{ borderBottom: "1px solid var(--border)", position: "relative", overflow: "hidden" }}>
         <div style={{ position: "absolute", fontFamily: "var(--font-display, 'Big Shoulders Display', sans-serif)", fontSize: "clamp(80px, 14vw, 200px)", fontWeight: 900, letterSpacing: "-6px", color: "transparent", WebkitTextStroke: "1px rgba(0,255,135,0.04)", right: "-20px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none", lineHeight: 1, whiteSpace: "nowrap", userSelect: "none" }}>

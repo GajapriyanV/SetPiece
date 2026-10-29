@@ -1,7 +1,9 @@
+import { communityProxy, usesGoCommunity } from "@/lib/server/community-proxy";
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 
-export async function GET() {
+export async function GET(request: Request) {
+  if(usesGoCommunity())return communityProxy(request,true);
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
@@ -27,7 +29,8 @@ export async function GET() {
 }
 
 // PATCH /api/notifications — mark all as read
-export async function PATCH() {
+export async function PATCH(request: Request) {
+  if(usesGoCommunity())return communityProxy(request,true);
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });

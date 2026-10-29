@@ -47,3 +47,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Go backend local files
+!backend/.env.example
+/backend/bin/
+/backend/*.exe
+/backend/schema-inspection.local.json
+
+/backend/schema-inspection-chat.local.json

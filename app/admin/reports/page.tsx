@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { readOwnProfile } from "@/lib/profile-client";
 import { createClient } from "@/utils/supabase/client";
 
 interface ReportAuthor {
@@ -40,13 +41,14 @@ export default function AdminReportsPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"unreviewed" | "all">("unreviewed");
   const [accessDenied, setAccessDenied] = useState(false);
+  const [actionError,setActionError]=useState("");
 
   useEffect(() => {
     const checkAdmin = async () => {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push("/"); return; }
-      const { data: profile } = await supabase.from("profiles").select("is_admin").eq("id", user.id).single();
+      const profile = await readOwnProfile(supabase,user.id);
       if (!profile?.is_admin) { setAccessDenied(true); setLoading(false); return; }
       fetchReports();
     };
@@ -70,11 +72,15 @@ export default function AdminReportsPage() {
   };
 
   const markReviewed = async (reportId: string) => {
-    await fetch(`/api/admin/reports/${reportId}`, { method: "PATCH" });
+    setActionError("");
+    try {
+    const response=await fetch(`/api/admin/reports/${reportId}`, { method: "PATCH" });
+    if(!response.ok)throw new Error();
     setReports((prev) => prev.map((r) => r.id === reportId ? { ...r, is_reviewed: true } : r));
     if (filter === "unreviewed") {
       setReports((prev) => prev.filter((r) => r.id !== reportId));
     }
+    } catch {setActionError("Could not mark this item reviewed. Please retry.");}
   };
 
   if (accessDenied) {
@@ -88,6 +94,7 @@ export default function AdminReportsPage() {
 
   return (
     <div style={{ paddingTop: "60px", minHeight: "100vh", background: "var(--dark)" }}>
+      {actionError && <p role="alert" style={{color:"var(--red)",padding:16}}>{actionError}</p>}
 
       {/* Header */}
       <div style={{ borderBottom: "1px solid var(--border)" }}>

@@ -1,3 +1,4 @@
+import { communityProxy, usesGoCommunity } from "@/lib/server/community-proxy";
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 
@@ -5,6 +6,7 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  if(usesGoCommunity())return communityProxy(_request,"optional");
   const { id } = await params;
   const supabase = await createClient();
 
@@ -29,9 +31,8 @@ export async function GET(
 
   // Get current user's likes (if authenticated)
   const { data: { user } } = await supabase.auth.getUser();
-  let likedIds = new Set<string>();
+  const likedIds = new Set<string>();
   if (user) {
-    const replyIds = (allReplies ?? []).map((r) => r.id);
     const { data: likes } = await supabase
       .from("forum_likes")
       .select("target_id")
@@ -59,6 +60,7 @@ export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  if(usesGoCommunity())return communityProxy(_request,true);
   const { id } = await params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -73,6 +75,7 @@ export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  if(usesGoCommunity())return communityProxy(request,true);
   const { id } = await params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();

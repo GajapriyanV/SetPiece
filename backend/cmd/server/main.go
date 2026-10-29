@@ -79,6 +79,17 @@ func runConfigured(ctx context.Context, cfg config.Config, logger *slog.Logger) 
 		if e != nil {
 			return errors.New("invalid local profile database")
 		}
+		if cfg.DatabaseRootCAs != nil {
+			if pc.ConnConfig.TLSConfig == nil {
+				return errors.New("verified database TLS is required")
+			}
+			pc.ConnConfig.TLSConfig.RootCAs = cfg.DatabaseRootCAs
+			for _, fallback := range pc.ConnConfig.Fallbacks {
+				if fallback.TLSConfig != nil {
+					fallback.TLSConfig.RootCAs = cfg.DatabaseRootCAs
+				}
+			}
+		}
 		pc.MaxConns = cfg.DatabaseMaxConns
 		pc.ConnConfig.ConnectTimeout = 3 * time.Second
 		pc.ConnConfig.RuntimeParams["statement_timeout"] = "3000"
@@ -112,7 +123,7 @@ func runConfigured(ctx context.Context, cfg config.Config, logger *slog.Logger) 
 		store := application.Store{Pool: applicationPool, Writable: cfg.CommunityDatabaseURL != ""}
 		forumAPI = &forum.Service{Store: store}
 		notificationAPI = &notifications.Service{Store: store}
-		supportAPI = &support.Service{Store: store, PrivateContactView: cfg.DevelopmentDatabaseURL != ""}
+		supportAPI = &support.Service{Store: store, PrivateContactView: cfg.DevelopmentDatabaseURL != "" || cfg.ProductionDatabaseURL != ""}
 	}
 	verifier := auth.NewVerifier(cfg.SupabaseURL, cfg.JWTAudience, cfg.JWTAlgorithms)
 	var media *livekit.Service
@@ -120,6 +131,8 @@ func runConfigured(ctx context.Context, cfg config.Config, logger *slog.Logger) 
 	var transport *realtime.Hub
 	var ws httpapi.Realtime
 	var directory httpapi.RoomDirectory
+	var control httpapi.RuntimeControl
+	var runtimeAdmin func(context.Context, string) error
 	var rooms httpapi.RoomService
 	var votes httpapi.VotingService
 	if cfg.LifecycleDatabaseURL != "" {
@@ -127,7 +140,7 @@ func runConfigured(ctx context.Context, cfg config.Config, logger *slog.Logger) 
 		var service *lifecycleRuntime
 		var cleanup func()
 		var err error
-		if cfg.RehearsalDatabaseURL != "" || cfg.DevelopmentDatabaseURL != "" {
+		if cfg.RehearsalDatabaseURL != "" || cfg.DevelopmentDatabaseURL != "" || cfg.ProductionDatabaseURL != "" {
 			service, cleanup, err = startLifecyclePool(startCtx, applicationPool, logger)
 		} else {
 			service, cleanup, err = startLifecycle(startCtx, cfg.LifecycleDatabaseURL, logger)
@@ -142,6 +155,10 @@ func runConfigured(ctx context.Context, cfg config.Config, logger *slog.Logger) 
 		stopWatch := context.AfterFunc(owner.Context(), func() { stopRuntime(ownership.ErrLost) })
 		defer stopWatch()
 		rooms = service
+		control = &runtimeControl{Service: service.Service, pool: applicationPool}
+		if applicationPool != nil {
+			runtimeAdmin = func(ctx context.Context, id string) error { return application.Admin(ctx, applicationPool, id) }
+		}
 		directory = service.Directory
 		votes = service.Voting
 		var gates []realtime.Gate
@@ -164,6 +181,7 @@ func runConfigured(ctx context.Context, cfg config.Config, logger *slog.Logger) 
 	server := &http.Server{
 		Addr: cfg.Address,
 		Handler: httpapi.New(httpapi.Dependencies{
+			Runtime: control, RuntimeAdmin: runtimeAdmin,
 			Forum: forumAPI, Notifications: notificationAPI, Support: supportAPI, Accounts: accounts, Rankings: rankings, Directory: directory, Media: mediaAPI, Realtime: ws, Auth: verifier, Database: db, Profiles: profiles, Rooms: rooms, Voting: votes, Logger: logger,
 			AllowedOrigins: cfg.AllowedOrigins,
 			QueryTimeout:   cfg.QueryTimeout, RequestTimeout: cfg.RequestTimeout,

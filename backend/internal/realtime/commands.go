@@ -54,6 +54,8 @@ func (h *Hub) command(c *client, cmd command, raw string) {
 func errorEnvelope(request string, e error) Envelope {
 	code, message := "unavailable", "Room temporarily unavailable"
 	switch {
+	case errors.Is(e, debates.ErrDraining):
+		code, message = "draining", "Rooms are paused for maintenance; existing debates can finish"
 	case errors.Is(e, debates.ErrInvalid), errors.Is(e, voting.ErrInvalid), errors.Is(e, chat.ErrInvalid):
 		code, message = "invalid", "Invalid command"
 	case errors.Is(e, debates.ErrForbidden), errors.Is(e, voting.ErrForbidden):

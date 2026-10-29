@@ -339,6 +339,12 @@ func TestIntegratedRehearsal(t *testing.T) {
 	for i := 0; i < 2; i++ {
 		command(i, "side:ready", map[string]any{"revision": state().Revision})
 	}
+	request("POST", "/api/admin/runtime/drain", 0, map[string]bool{"draining": true}, 403)
+	drain := request("POST", "/api/admin/runtime/drain", 2, map[string]bool{"draining": true}, 200)
+	if drain["safeToStop"] != false || drain["activeDebates"] != float64(1) {
+		t.Fatal("active countdown incorrectly drained")
+	}
+	request("POST", "/api/rooms", 0, map[string]any{"topics": []map[string]string{{"topic": "Paused", "sideALabel": "A", "sideBLabel": "B"}}}, 503)
 	command(2, "chat:send", map[string]string{"body": "Rehearsal audience"})
 	wait := func(check func() bool) {
 		t.Helper()
@@ -390,6 +396,14 @@ func TestIntegratedRehearsal(t *testing.T) {
 	if request("GET", "/api/account/profile", 1, nil, 200)["mvp_count"] != float64(1) {
 		t.Fatal("MVP not visible")
 	}
+	if request("GET", "/api/admin/runtime", 2, nil, 200)["safeToStop"] != false {
+		t.Fatal("results must finish before shutdown")
+	}
+	expire()
+	if request("GET", "/api/admin/runtime", 2, nil, 200)["safeToStop"] != true {
+		t.Fatal("completed debate did not drain")
+	}
+	request("POST", "/api/admin/runtime/drain", 2, map[string]bool{"draining": false}, 200)
 	shutdown()
 	// Controlled migration rerun and restart cannot duplicate committed awards/results.
 	if e = migrations.Apply(ctx, pool); e != nil {

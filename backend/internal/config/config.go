@@ -1,6 +1,7 @@
 package config
 
 import (
+	"crypto/x509"
 	"errors"
 	"net"
 	"net/url"
@@ -12,6 +13,9 @@ import (
 
 // Config contains server-only settings. Never log it: DatabaseURL is a credential.
 type Config struct {
+	ProductionDatabaseURL                 string
+	ProductionProjectRef                  string
+	DatabaseRootCAs                       *x509.CertPool
 	DevelopmentDatabaseURL                string
 	DevelopmentProjectRef                 string
 	RehearsalDatabaseURL                  string
@@ -90,7 +94,7 @@ func Load(getenv func(string) string) (Config, error) {
 	}
 	// A missing database allows the foundation's liveness/authentication to run,
 	// but readiness stays unavailable. It must never imply a completed migration.
-	if c.Environment == "production" && c.DatabaseURL == "" {
+	if c.Environment == "production" && c.DatabaseURL == "" && strings.TrimSpace(getenv("PRODUCTION_DATABASE_URL")) == "" {
 		return Config{}, errors.New("DATABASE_URL is required in production")
 	}
 	c.CommunityDatabaseURL = strings.TrimSpace(getenv("COMMUNITY_DATABASE_URL"))
@@ -150,6 +154,9 @@ func Load(getenv func(string) string) (Config, error) {
 		if e != nil || c.Environment != "development" || c.LifecycleDatabaseURL == "" || u.Scheme != "ws" || u.Hostname() != "127.0.0.1" || u.User != nil || u.Path != "" || u.RawQuery != "" || u.Fragment != "" || c.LiveKitKey == "" || c.LiveKitSecret == "" {
 			return Config{}, errors.New("LOCAL_LIVEKIT_* requires an isolated lifecycle database and a ws://127.0.0.1 local server")
 		}
+	}
+	if err := c.loadProduction(getenv); err != nil {
+		return Config{}, err
 	}
 	c.ProfileLocation = time.Local
 	if zone := strings.TrimSpace(getenv("PROFILE_TIME_ZONE")); zone != "" {

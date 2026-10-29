@@ -31,6 +31,8 @@ type Realtime interface {
 }
 
 type Dependencies struct {
+	Runtime        RuntimeControl
+	RuntimeAdmin   func(context.Context, string) error
 	Forum          ForumService
 	Notifications  NotificationService
 	Support        SupportService
@@ -112,6 +114,7 @@ func New(d Dependencies) http.Handler {
 	if d.Realtime != nil {
 		mux.HandleFunc("POST /api/realtime/ticket", d.Realtime.Ticket)
 	}
+	registerRuntime(mux, d)
 	registerCommunity(mux, d)
 	registerAccounts(mux, d)
 	registerRooms(mux, d)

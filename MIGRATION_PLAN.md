@@ -1,5 +1,19 @@
 # SetPiece V2 migration plan
 
+## Authorized production cutover (2026-10-29)
+The user approved finishing Go deployment on the existing Railway/Vercel projects without recreating deleted Upstash. This supersedes earlier deployment approval gates for this cutover. The overhaul is merged into master af41083; implementation continues on setpiece-go-production.
+
+- [x] Add explicit production writable/media settings, restricted role/project/TLS guards and one shared pool.
+- [x] Add authenticated administrator creation-stop/drain controls.
+- [x] Read-only preflight: four migrations, zero active rooms/debates/owners, existing LiveKit responds with zero rooms.
+- [x] Complete new regression, SQL, race and final container checks.
+- [ ] Configure/deploy the existing Railway service from /backend and verify health.
+- [ ] Switch and rebuild Vercel with all Go flags and matching HTTP/WebSocket endpoints.
+- [ ] Verify hosted routes/protocol and record signed-in browser limitations.
+- [ ] Publish the reviewed changes and deployment evidence.
+
+See [backend/PRODUCTION.md](backend/PRODUCTION.md). Supabase remains the sole application database. Deleted Redis state cannot be recovered by the Go migration; no active SQL debates or LiveKit rooms were found.
+
 Status: phases 1–4C implemented and locally verified; phase 5 integrated local, restricted-role/ownership and Linux container rehearsals passed. Signed-in browser/provider checks, staging privilege/ownership acceptance, legacy continuity and production cutover gates remain open.
 Baseline: master/origin/master 8333e70e8d8d1e97c65c52b55a0d7be76cb67c35.
 Audit date: 2026-10-10 (America/Vancouver).

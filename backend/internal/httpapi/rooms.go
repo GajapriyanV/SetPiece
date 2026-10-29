@@ -43,6 +43,8 @@ func roomIdentity(w http.ResponseWriter, r *http.Request, d Dependencies) (auth.
 func roomError(w http.ResponseWriter, e error) {
 	status, message := 503, "Room temporarily unavailable"
 	switch {
+	case errors.Is(e, debates.ErrDraining):
+		status, message = 503, "Rooms are paused for maintenance; existing debates can finish"
 	case errors.Is(e, debates.ErrNotFound):
 		status, message = 404, "Room not found"
 	case errors.Is(e, debates.ErrForbidden):

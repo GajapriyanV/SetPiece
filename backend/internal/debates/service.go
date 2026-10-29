@@ -11,10 +11,12 @@ import (
 // A single Service owns ephemeral connections. PostgreSQL remains authoritative
 // for all durable changes. Striped locks bound mutex memory without one global lock.
 type Service struct {
-	repo    Repository
-	now     func() time.Time
-	grace   time.Duration
-	stripes [64]struct {
+	admission sync.RWMutex
+	draining  bool
+	repo      Repository
+	now       func() time.Time
+	grace     time.Duration
+	stripes   [64]struct {
 		sync.Mutex
 		connections map[string]map[string]map[string]bool
 	}
@@ -39,6 +41,11 @@ func (s *Service) stripe(id string) int {
 	return int(h.Sum32() % 64)
 }
 func (s *Service) Create(ctx context.Context, user string, topics []Topic, featured bool) (Room, error) {
+	s.admission.RLock()
+	defer s.admission.RUnlock()
+	if s.draining {
+		return Room{}, ErrDraining
+	}
 	r, e := newRoom(user, topics, featured, s.now())
 	if e != nil {
 		return Room{}, e
@@ -120,6 +127,11 @@ func (s *Service) Disconnect(ctx context.Context, room, user, connection string,
 	return r, nil
 }
 func (s *Service) Command(ctx context.Context, room, user, kind, side string, revision int64) (Room, error) {
+	s.admission.RLock()
+	defer s.admission.RUnlock()
+	if s.draining && kind == "ready" {
+		return Room{}, ErrDraining
+	}
 	stripe := &s.stripes[s.stripe(room)]
 	stripe.Lock()
 	defer stripe.Unlock()

@@ -1,5 +1,8 @@
 # Phase 5: local rehearsal and deployment runbook
 
+## Updated production scope
+The user authorized the existing hosted Go cutover on 2026-10-29. See [PRODUCTION.md](PRODUCTION.md) for the current production configuration, drain controls and rollback limits. The local-only restrictions below describe earlier rehearsal milestones.
+
 ## Scope
 
 The user approved an integrated local rehearsal first, then continued local preparation because no separate staging project is available. The user subsequently confirmed the existing project is development-only and authorized migrating it while preserving data. That scope is documented in [DEVELOPMENT.md](DEVELOPMENT.md); it does not authorize production deployment or legacy retirement. One existing Supabase PostgreSQL database remains the design.

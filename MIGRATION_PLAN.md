@@ -1,20 +1,20 @@
 # SetPiece V2 migration plan
 
-## Authorized production cutover (2026-10-29)
+## Hosted Go cutover completed (2026-10-30)
 The user approved finishing Go deployment on the existing Railway/Vercel projects without recreating deleted Upstash. This supersedes earlier deployment approval gates for this cutover. The overhaul is merged into master af41083; implementation continues on setpiece-go-production.
 
 - [x] Add explicit production writable/media settings, restricted role/project/TLS guards and one shared pool.
 - [x] Add authenticated administrator creation-stop/drain controls.
 - [x] Read-only preflight: four migrations, zero active rooms/debates/owners, existing LiveKit responds with zero rooms.
 - [x] Complete new regression, SQL, race and final container checks.
-- [ ] Configure/deploy the existing Railway service from /backend and verify health.
-- [ ] Switch and rebuild Vercel with all Go flags and matching HTTP/WebSocket endpoints.
-- [ ] Verify hosted routes/protocol and record signed-in browser limitations.
-- [ ] Publish the reviewed changes and deployment evidence.
+- [x] Configure/deploy the existing Railway service from /backend and verify health; free-plan sleeping explicitly accepted.
+- [x] Switch and rebuild Vercel with all Go flags and matching HTTP/WebSocket endpoints.
+- [x] Verify hosted public routes, CORS/preflight and anonymous protocol guards; user confirms signed-in room creation opens successfully. Multi-user media/voting acceptance remains open.
+- [x] Publish runtime changes as 67d4b77 on master and record hosting evidence in backend/PRODUCTION.md.
 
 See [backend/PRODUCTION.md](backend/PRODUCTION.md). Supabase remains the sole application database. Deleted Redis state cannot be recovered by the Go migration; no active SQL debates or LiveKit rooms were found.
 
-Status: phases 1–4C implemented and locally verified; phase 5 integrated local, restricted-role/ownership and Linux container rehearsals passed. Signed-in browser/provider checks, staging privilege/ownership acceptance, legacy continuity and production cutover gates remain open.
+Status: phases 1-4C and the hosted Go cutover are implemented. Railway and Vercel use Go; the user confirms hosted room creation. Remaining work is multi-user browser/media/notification/Auth acceptance, observation and eventual legacy-code retirement. Earlier phase descriptions below are historical.
 Baseline: master/origin/master 8333e70e8d8d1e97c65c52b55a0d7be76cb67c35.
 Audit date: 2026-10-10 (America/Vancouver).
 Read [ARCHITECTURE.md](ARCHITECTURE.md) for evidence/contracts and [AGENTS.md](AGENTS.md) for persistent instructions.

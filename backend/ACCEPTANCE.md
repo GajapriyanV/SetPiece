@@ -1,4 +1,16 @@
-# Development acceptance
+# Development and hosted acceptance
+
+## Hosted cutover (2026-10-30)
+
+- [x] Railway Go health/readiness, public SQL-backed routes, CORS/preflight and anonymous transport/admin authorization checks.
+- [x] Vercel Go-enabled production build and public homepage/forum/statistics/leaderboard routes.
+- [x] User confirms signed-in room creation opens successfully on https://set-piece.vercel.app.
+- [ ] Multi-user browser audio, speaker transitions, voting/results and cross-account notifications.
+- [ ] Remaining sign-out/refresh/OAuth/reset/onboarding acceptance on the hosted build.
+
+See [PRODUCTION.md](PRODUCTION.md) for deployment IDs and free-plan availability limits. The local checks below are earlier evidence and do not establish hosted media parity.
+
+## Local preview context
 
 Use http://localhost:3000 with the existing development Supabase project. The Go API uses its restricted role. LiveKit runs only on this computer's loopback interfaces. Keep existing records; synthetic database tests must remain in their disposable databases.
 

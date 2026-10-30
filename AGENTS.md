@@ -1,8 +1,8 @@
 # SetPiece contributor instructions
 
-## Current cutover authorization (2026-10-29)
+## Current hosted state (2026-10-30)
 - The user explicitly approved replacing the broken hosted Node service with Go on the existing Railway service and switching the existing Vercel frontend. Upstash was deleted; do not recreate it. This approval supersedes earlier production gates below for this cutover only.
-- Work is on setpiece-go-production, based on origin/master af41083 (merged overhaul). Preserve the original debate-features checkout.
+- The hosted Go cutover is live: runtime commit 67d4b77 is on master, Railway uses /backend, and Vercel has all Go flags enabled. The user confirms hosted room creation works. Work remains on setpiece-go-production; preserve the original debate-features checkout.
 - Production uses PRODUCTION_DATABASE_URL/PRODUCTION_PROJECT_REF, restricted setpiece_app, verified TLS and remote LIVEKIT_* with one replica (free-plan sleeping accepted by the user). See backend/PRODUCTION.md for deployment/drain/rollback. Never run fixture SQL on Supabase. Legacy code removal and unfinished browser acceptance remain separate work.
 
 ## Scope and approval

@@ -1,9 +1,9 @@
 # SetPiece architecture
 
-## Production cutover preparation (2026-10-29)
-The overhaul was merged into master (af41083). The user authorized the existing Railway/Vercel cutover after confirming the legacy Upstash database was deleted. The writable production configuration now shares one restricted Supabase pool across all modules and uses the existing remote LiveKit service. Administrator drain controls stop creation and ready commands while existing debates complete. Current verification and hosted status are recorded in [the production runbook](backend/PRODUCTION.md); older sections below are historical milestone evidence.
+## Hosted Go architecture (2026-10-30)
+The overhaul was merged into master (af41083). The user authorized the existing Railway/Vercel cutover after confirming the legacy Upstash database was deleted. The writable production configuration now shares one restricted Supabase pool across all modules and uses the existing remote LiveKit service. Administrator drain controls stop creation and ready commands while existing debates complete. Railway now runs Go from /backend, Vercel uses the Go profile/community/room switches, and the user confirms hosted room creation works. Supabase remains the single database/Auth/Storage provider and LiveKit supplies media; the active Go paths do not require Upstash. Current verification and hosted status are recorded in [the production runbook](backend/PRODUCTION.md); older sections below are historical milestone evidence.
 
-Status: phases 1–4C implemented locally. Signed-in browser/media/Realtime acceptance, legacy continuity and production cutover remain pending.
+Status: hosted Go cutover completed; multi-user browser/media/Realtime acceptance and legacy-code retirement remain open. The baseline inventory and earlier milestones below describe historical states.
 Audit date: 2026-10-10 (America/Vancouver).
 Baseline: master/origin/master commit 8333e70e8d8d1e97c65c52b55a0d7be76cb67c35.
 Related documents: [instructions](AGENTS.md), [migration plan](MIGRATION_PLAN.md).
